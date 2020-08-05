@@ -4,8 +4,8 @@ version = "0.1.0"
 authors = ["Geobert Quach <geobert@protonmail.com>"]
 edition = "2018"
 description = "A dice roller library supporting many features"
-keywords = ["dice", "roller"]
-categories = ["random", "game"]
+keywords = ["dice", "roller", "RPG", "game", "gaming"]
+categories = ["game-development", "games"]
 repository = "https://github.com/Geobert/caith"
 license = "MIT"
 
