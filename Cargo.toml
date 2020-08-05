@@ -1,6 +1,6 @@
 [package]
 name = "caith"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Geobert Quach <geobert@protonmail.com>"]
 edition = "2018"
 description = "A dice roller library supporting many features"
@@ -8,6 +8,7 @@ keywords = ["dice", "roller", "RPG", "game", "gaming"]
 categories = ["game-development", "games"]
 repository = "https://github.com/Geobert/caith"
 license = "MIT"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
