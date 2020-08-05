@@ -122,7 +122,9 @@ impl Add for RollResult {
     type Output = Self;
 
     fn add(mut self, mut rhs: Self) -> Self::Output {
-        self.history.push(RollHistory::Separator);
+        if rhs.history.len() > 0 {
+            self.history.push(RollHistory::Separator);
+        }
         self.history.append(&mut rhs.history);
         RollResult {
             total: self.total + rhs.total,
@@ -137,7 +139,9 @@ impl Sub for RollResult {
     type Output = Self;
 
     fn sub(mut self, mut rhs: Self) -> Self::Output {
-        self.history.push(RollHistory::Separator);
+        if rhs.history.len() > 0 {
+            self.history.push(RollHistory::Separator);
+        }
         self.history.append(&mut rhs.history);
         RollResult {
             total: self.total - rhs.total,
@@ -152,7 +156,9 @@ impl Mul for RollResult {
     type Output = Self;
 
     fn mul(mut self, mut rhs: Self) -> Self::Output {
-        self.history.push(RollHistory::Separator);
+        if rhs.history.len() > 0 {
+            self.history.push(RollHistory::Separator);
+        }
         self.history.append(&mut rhs.history);
         RollResult {
             total: self.total * rhs.total,
@@ -167,7 +173,9 @@ impl Div for RollResult {
     type Output = Self;
 
     fn div(mut self, mut rhs: Self) -> Self::Output {
-        self.history.push(RollHistory::Separator);
+        if rhs.history.len() > 0 {
+            self.history.push(RollHistory::Separator);
+        }
         self.history.append(&mut rhs.history);
         RollResult {
             total: self.total / rhs.total,
