@@ -180,12 +180,13 @@ impl Div for RollResult {
 
 impl Display for RollResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "`")?;
         self.history
             .iter()
             .try_for_each::<_, std::fmt::Result>(|v| {
                 match v {
                     RollHistory::Roll(v) => {
-                        write!(f, "`[")?;
+                        write!(f, "[")?;
                         let len = v.len();
                         v.iter().enumerate().try_for_each(|(i, r)| {
                             if i == len - 1 {
@@ -194,15 +195,17 @@ impl Display for RollResult {
                                 write!(f, "{}, ", r)
                             }
                         })?;
-                        write!(f, "]`")?;
+                        write!(f, "]")?;
                     }
                     RollHistory::Separator => write!(f, " | ")?,
                 }
 
                 Ok(())
             })?;
+        write!(f, "` Result: {}", self.get_total())?;
+
         if let Some(reason) = &self.reason {
-            write!(f, " reason: `{}`", reason)?;
+            write!(f, ", Reason: `{}`", reason)?;
         }
         Ok(())
     }
