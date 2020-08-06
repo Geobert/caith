@@ -11,7 +11,7 @@ pub use rollresult::RollResult;
 /// Execute a roll command
 pub fn roll(input: &str) -> Result<RollResult> {
     let mut pairs = RollParser::parse(Rule::command, input)?;
-    let mut roll_res = compute(pairs.next().unwrap().into_inner());
+    let mut roll_res = compute(pairs.next().unwrap().into_inner())?;
     if let Some(reason) = pairs.next() {
         if reason.as_rule() == Rule::reason {
             roll_res.add_reason(reason.as_str()[1..].trim().to_owned());

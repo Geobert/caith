@@ -6,6 +6,7 @@ use pest::{
 use pest_derive::Parser;
 use rand::{thread_rng, Rng};
 
+use crate::error::Result;
 use crate::rollresult::RollResult;
 
 static PREC_CLIMBER: Lazy<PrecClimber<Rule>> = Lazy::new(|| {
@@ -33,14 +34,98 @@ pub(crate) enum TotalModifier {
     None,
 }
 
-fn extract_option_value(option: Pair<Rule>) -> u64 {
-    option
-        .into_inner()
-        .next()
-        .unwrap()
-        .as_str()
-        .parse::<u64>()
-        .unwrap()
+struct OptionResult {
+    res: Vec<u64>,
+    modifier: TotalModifier,
+}
+
+fn compute_explode(
+    rolls: &mut RollResult,
+    sides: u64,
+    res: Vec<u64>,
+    option: Pair<Rule>,
+) -> (TotalModifier, Vec<u64>) {
+    let value = extract_option_value(option);
+    let nb = res.iter().filter(|x| **x == value).count() as u64;
+    rolls.add_history(res.clone());
+    let res = if nb > 0 {
+        let res = roll_dice(nb, sides);
+        rolls.add_history(res.clone());
+        res
+    } else {
+        res
+    };
+    (TotalModifier::None, res)
+}
+
+fn compute_i_explode(
+    rolls: &mut RollResult,
+    sides: u64,
+    res: Vec<u64>,
+    option: Pair<Rule>,
+) -> (TotalModifier, Vec<u64>) {
+    let value = extract_option_value(option);
+    rolls.add_history(res.clone());
+    let mut nb = res.into_iter().filter(|x| *x == value).count() as u64;
+    let mut res = Vec::new();
+    while nb > 0 {
+        res = roll_dice(nb, sides);
+        nb = res.iter().filter(|x| **x == value).count() as u64;
+        rolls.add_history(res.clone());
+    }
+    (TotalModifier::None, res)
+}
+
+fn compute_reroll(
+    rolls: &mut RollResult,
+    sides: u64,
+    res: Vec<u64>,
+    option: Pair<Rule>,
+) -> (TotalModifier, Vec<u64>) {
+    let value = extract_option_value(option);
+    let mut has_rerolled = false;
+    let res: Vec<u64> = res
+        .into_iter()
+        .map(|x| {
+            if x <= value {
+                has_rerolled = true;
+                roll_dice(1, sides)[0]
+            } else {
+                x
+            }
+        })
+        .collect();
+
+    if has_rerolled {
+        rolls.add_history(res.clone());
+    }
+    (TotalModifier::None, res)
+}
+
+fn compute_i_reroll(
+    rolls: &mut RollResult,
+    sides: u64,
+    res: Vec<u64>,
+    option: Pair<Rule>,
+) -> (TotalModifier, Vec<u64>) {
+    let value = extract_option_value(option);
+    let mut has_rerolled = false;
+    let res: Vec<u64> = res
+        .into_iter()
+        .map(|x| {
+            let mut x = x;
+            while x <= value {
+                has_rerolled = true;
+                x = roll_dice(1, sides)[0]
+            }
+            x
+        })
+        .collect();
+
+    if has_rerolled {
+        rolls.add_history(res.clone());
+    }
+    (TotalModifier::None, res)
 }
 
 fn compute_option(
@@ -48,73 +133,12 @@ fn compute_option(
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
-) -> OptionResult {
+) -> Result<OptionResult> {
     let (modifier, mut res) = match option.as_rule() {
-        Rule::explode => {
-            let value = extract_option_value(option);
-            let nb = res.iter().filter(|x| **x == value).count() as u64;
-            rolls.add_history(res.clone());
-            let res = if nb > 0 {
-                let res = roll_dice(nb, sides);
-                rolls.add_history(res.clone());
-                res
-            } else {
-                res
-            };
-            (TotalModifier::None, res)
-        }
-        Rule::i_explode => {
-            let value = extract_option_value(option);
-            rolls.add_history(res.clone());
-            let mut nb = res.into_iter().filter(|x| *x == value).count() as u64;
-            let mut res = Vec::new();
-            while nb > 0 {
-                res = roll_dice(nb, sides);
-                nb = res.iter().filter(|x| **x == value).count() as u64;
-                rolls.add_history(res.clone());
-            }
-            (TotalModifier::None, res)
-        }
-        Rule::reroll => {
-            let value = extract_option_value(option);
-            let mut has_rerolled = false;
-            let res: Vec<u64> = res
-                .into_iter()
-                .map(|x| {
-                    if x <= value {
-                        has_rerolled = true;
-                        roll_dice(1, sides)[0]
-                    } else {
-                        x
-                    }
-                })
-                .collect();
-
-            if has_rerolled {
-                rolls.add_history(res.clone());
-            }
-            (TotalModifier::None, res)
-        }
-        Rule::i_reroll => {
-            let value = extract_option_value(option);
-            let mut has_rerolled = false;
-            let res: Vec<u64> = res
-                .into_iter()
-                .map(|x| {
-                    let mut x = x;
-                    while x <= value {
-                        has_rerolled = true;
-                        x = roll_dice(1, sides)[0]
-                    }
-                    x
-                })
-                .collect();
-
-            if has_rerolled {
-                rolls.add_history(res.clone());
-            }
-            (TotalModifier::None, res)
-        }
+        Rule::explode => compute_explode(rolls, sides, res, option),
+        Rule::i_explode => compute_i_explode(rolls, sides, res, option),
+        Rule::reroll => compute_reroll(rolls, sides, res, option),
+        Rule::i_reroll => compute_i_reroll(rolls, sides, res, option),
         Rule::keep_hi => {
             let value = extract_option_value(option);
             rolls.add_history(res.clone());
@@ -145,6 +169,18 @@ fn compute_option(
         }
         _ => unreachable!("{:#?}", option),
     };
+    // check if we have enough dice to keep/drop
+    match modifier {
+        TotalModifier::KeepHi(n)
+        | TotalModifier::KeepLo(n)
+        | TotalModifier::DropHi(n)
+        | TotalModifier::DropLo(n) => {
+            if n > res.len() {
+                return Err("Not enough dice to keep or drop".into());
+            }
+        }
+        TotalModifier::None | TotalModifier::TargetFailure(_, _) => (),
+    }
     res.sort_unstable();
     let res = match modifier {
         TotalModifier::KeepHi(n) => res[res.len() - n..].to_vec(),
@@ -153,25 +189,32 @@ fn compute_option(
         TotalModifier::DropLo(n) => res[n..].to_vec(),
         TotalModifier::None | TotalModifier::TargetFailure(_, _) => res,
     };
-    OptionResult { res, modifier }
+    Ok(OptionResult { res, modifier })
 }
 
-struct OptionResult {
-    res: Vec<u64>,
-    modifier: TotalModifier,
-}
-
-fn compute_roll(mut dice: Pairs<Rule>) -> RollResult {
+fn compute_roll(mut dice: Pairs<Rule>) -> Result<RollResult> {
     let mut rolls = RollResult::new();
-    let nb = dice.next().unwrap().as_str().parse::<u64>().unwrap();
+    let maybe_nb = dice.next().unwrap();
+    let nb = match maybe_nb.as_rule() {
+        Rule::nb_dice => {
+            dice.next(); // skip `roll`
+            maybe_nb.as_str().parse::<u64>().unwrap()
+        }
+        Rule::roll => 1,
+        _ => unreachable!("{:?}", maybe_nb),
+    };
+
     let sides = dice.next().unwrap().as_str().parse::<u64>().unwrap();
+    if sides == 0 {
+        return Err("Dice can't have 0 sides".into());
+    }
     let mut res = roll_dice(nb, sides);
     let mut modifier = TotalModifier::None;
     let mut next_option = dice.next();
     if next_option.is_some() {
         while next_option.is_some() {
             let option = next_option.unwrap();
-            let opt_res = compute_option(&mut rolls, sides, res, option);
+            let opt_res = compute_option(&mut rolls, sides, res, option)?;
             res = opt_res.res;
             modifier = match opt_res.modifier {
                 TotalModifier::TargetFailure(t, f) => match modifier {
@@ -197,24 +240,36 @@ fn compute_roll(mut dice: Pairs<Rule>) -> RollResult {
         rolls.compute_total(TotalModifier::None);
     }
 
-    rolls
+    Ok(rolls)
 }
 
-pub(crate) fn compute(expr: Pairs<Rule>) -> RollResult {
+pub(crate) fn compute(expr: Pairs<Rule>) -> Result<RollResult> {
     PREC_CLIMBER.climb(
         expr,
         |pair: Pair<Rule>| match pair.as_rule() {
-            Rule::number => RollResult::with_total(pair.as_str().parse::<i64>().unwrap()),
+            Rule::number => Ok(RollResult::with_total(
+                pair.as_str().parse::<i64>().unwrap(),
+            )),
             Rule::expr => compute(pair.into_inner()),
             Rule::dice => compute_roll(pair.into_inner()),
             _ => unreachable!("{:#?}", pair),
         },
-        |lhs: RollResult, op: Pair<Rule>, rhs: RollResult| match op.as_rule() {
-            Rule::add => lhs + rhs,
-            Rule::sub => lhs - rhs,
-            Rule::mul => lhs * rhs,
-            Rule::div => lhs / rhs,
-            _ => unreachable!(),
+        |lhs: Result<RollResult>, op: Pair<Rule>, rhs: Result<RollResult>| match (lhs, rhs) {
+            (Ok(lhs), Ok(rhs)) => match op.as_rule() {
+                Rule::add => Ok(lhs + rhs),
+                Rule::sub => Ok(lhs - rhs),
+                Rule::mul => Ok(lhs * rhs),
+                Rule::div => {
+                    if rhs.get_total() != 0 {
+                        Ok(lhs / rhs)
+                    } else {
+                        Err("Can't divide by zero".into())
+                    }
+                }
+                _ => unreachable!(),
+            },
+            (Err(e), _) => Err(e),
+            (_, Err(e)) => Err(e),
         },
     )
 }
@@ -222,4 +277,14 @@ pub(crate) fn compute(expr: Pairs<Rule>) -> RollResult {
 fn roll_dice(num: u64, sides: u64) -> Vec<u64> {
     let mut rng = thread_rng();
     (0..num).map(|_| rng.gen_range(1, sides + 1)).collect()
+}
+
+fn extract_option_value(option: Pair<Rule>) -> u64 {
+    option
+        .into_inner()
+        .next()
+        .unwrap()
+        .as_str()
+        .parse::<u64>()
+        .unwrap()
 }

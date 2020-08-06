@@ -6,8 +6,8 @@ sub = { "-" }
 mul = { "*" }
 div = { "/" }
 
-dice = { nb_dice* ~ (roll ~ number) ~ option* ~ target_failure{, 2} }
-roll = _{ "d" }
+dice = { nb_dice? ~ (roll ~ number) ~ option* ~ target_failure{, 2} }
+roll = { "d" | "D" }
 option = _{ explode | i_explode | reroll | i_reroll | keep_hi | keep_lo | drop_hi | drop_lo }
 target_failure = _{ target | failure }
 explode = { "e" ~ number }

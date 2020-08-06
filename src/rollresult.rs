@@ -83,10 +83,12 @@ impl RollResult {
                     RollHistory::Separator => None,
                 })
                 .flatten()
-                .map(|x| *x)
+                .copied()
                 .collect::<Vec<u64>>();
             flat.sort_unstable();
             let flat = flat;
+            // theres's no check on bounds as `compute_total` is called after `compute_option` where
+            // the check is done
             let slice = match modifier {
                 TotalModifier::KeepHi(n) => &flat[flat.len() - n..],
                 TotalModifier::KeepLo(n) => &flat[..n],
@@ -122,7 +124,7 @@ impl Add for RollResult {
     type Output = Self;
 
     fn add(mut self, mut rhs: Self) -> Self::Output {
-        if rhs.history.len() > 0 {
+        if !rhs.history.is_empty() {
             self.history.push(RollHistory::Separator);
         }
         self.history.append(&mut rhs.history);
@@ -139,7 +141,7 @@ impl Sub for RollResult {
     type Output = Self;
 
     fn sub(mut self, mut rhs: Self) -> Self::Output {
-        if rhs.history.len() > 0 {
+        if !rhs.history.is_empty() {
             self.history.push(RollHistory::Separator);
         }
         self.history.append(&mut rhs.history);
@@ -156,7 +158,7 @@ impl Mul for RollResult {
     type Output = Self;
 
     fn mul(mut self, mut rhs: Self) -> Self::Output {
-        if rhs.history.len() > 0 {
+        if !rhs.history.is_empty() {
             self.history.push(RollHistory::Separator);
         }
         self.history.append(&mut rhs.history);
@@ -173,7 +175,7 @@ impl Div for RollResult {
     type Output = Self;
 
     fn div(mut self, mut rhs: Self) -> Self::Output {
-        if rhs.history.len() > 0 {
+        if !rhs.history.is_empty() {
             self.history.push(RollHistory::Separator);
         }
         self.history.append(&mut rhs.history);
