@@ -10,7 +10,7 @@ Add in your Cargo.toml:
 
 ```toml
 [dependencie]
-caith = "0.1"
+caith = "0.2"
 ```
 
 And in your code:
@@ -36,12 +36,12 @@ Options:
 + - / * : modifiers
 e# : Explode value
 ie# : Indefinite explode value
-K# : How many dice to keep out the roll, keeping the highest
-k# : How many dice to keep out the roll, keeping the lowest
-D# : How many dice to drop out the roll, dropping the highest
-d# : How many dice to drop out the roll, drpoping the lowest
-r# : Reroll value
-ir# : Indefinite reroll value
+K#  : Keeping # highest (upperacse "K")
+k#  : Keeping # lowest (lowercase "k")
+D#  : Dropping the highest (uppercase "D")
+d#  : Dropping the lowest (lowercase "d")
+r#  : Reroll if <= value
+ir# : Indefinite reroll if <= value
 
 Target:
 t# : minimum value to count as success
