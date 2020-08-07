@@ -6,21 +6,13 @@ The different features are totally inspired by https://github.com/Humblemonk/Dic
 
 # Usage
 
-Add in your Cargo.toml:
-
-```toml
-[dependencie]
-caith = "0.3"
-```
-
-And in your code:
 ```rust
 use caith::{roll, RollResult};
 
 // ...
 let result = roll("1d6 ! initiative")?;
 
-printf("{} ({})", result.get_total(), result.get_reason());
+printf("{} ({})", result.get_total(), result.get_reason().unwrap());
 
 printf("{}", result);
 ```
@@ -31,6 +23,8 @@ printf("{}", result);
 xdy [OPTIONS] [TARGET] [FAILURE] [! REASON]
 
 roll `x` dice(s) with `y` sides
+
+`y` can also be "F" or "f" for fudge dice. In this case, no option applies if provided they will be ignored.
 
 Options:
 + - / * : modifiers

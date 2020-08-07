@@ -1,3 +1,6 @@
+0.4.0
+- Support for Fudge/Fate dice
+
 0.3.0
 - Result is printed bold
 - Keep operations as separator
