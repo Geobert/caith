@@ -1,3 +1,8 @@
+0.3.0
+- Result is printed bold
+- Keep operations as separator
+- Keep literal value in the result display
+
 0.2.0
 - Error reporting
 - Accept no nb dice (default to 1): `d6` == `1d6`

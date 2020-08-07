@@ -10,7 +10,7 @@ Add in your Cargo.toml:
 
 ```toml
 [dependencie]
-caith = "0.2"
+caith = "0.3"
 ```
 
 And in your code:

@@ -11,7 +11,8 @@ use crate::parser::TotalModifier;
 #[derive(Debug)]
 pub enum RollHistory {
     Roll(Vec<u64>),
-    Separator,
+    Value(u64),
+    Separator(&'static str),
 }
 
 /// Carry the result of the roll and an history of the steps taken
@@ -43,7 +44,7 @@ impl RollResult {
     pub(crate) fn with_total(total: i64) -> Self {
         Self {
             total,
-            history: Vec::new(),
+            history: vec![RollHistory::Value(total as u64)],
             reason: None,
             dirty: false,
         }
@@ -75,16 +76,17 @@ impl RollResult {
     pub(crate) fn compute_total(&mut self, modifier: TotalModifier) -> i64 {
         if self.dirty {
             self.dirty = false;
-            let mut flat = self
-                .history
-                .iter()
-                .filter_map(|h| match h {
-                    RollHistory::Roll(v) => Some(v),
-                    RollHistory::Separator => None,
-                })
-                .flatten()
-                .copied()
-                .collect::<Vec<u64>>();
+            let mut flat = self.history.iter().fold(Vec::new(), |mut acc, h| {
+                match h {
+                    RollHistory::Roll(r) => {
+                        let mut c = r.clone();
+                        acc.append(&mut c);
+                    }
+                    RollHistory::Value(v) => acc.push(*v),
+                    RollHistory::Separator(_) => (),
+                };
+                acc
+            });
             flat.sort_unstable();
             let flat = flat;
             // theres's no check on bounds as `compute_total` is called after `compute_option` where
@@ -125,7 +127,7 @@ impl Add for RollResult {
 
     fn add(mut self, mut rhs: Self) -> Self::Output {
         if !rhs.history.is_empty() {
-            self.history.push(RollHistory::Separator);
+            self.history.push(RollHistory::Separator("+"));
         }
         self.history.append(&mut rhs.history);
         RollResult {
@@ -142,7 +144,7 @@ impl Sub for RollResult {
 
     fn sub(mut self, mut rhs: Self) -> Self::Output {
         if !rhs.history.is_empty() {
-            self.history.push(RollHistory::Separator);
+            self.history.push(RollHistory::Separator("-"));
         }
         self.history.append(&mut rhs.history);
         RollResult {
@@ -159,7 +161,7 @@ impl Mul for RollResult {
 
     fn mul(mut self, mut rhs: Self) -> Self::Output {
         if !rhs.history.is_empty() {
-            self.history.push(RollHistory::Separator);
+            self.history.push(RollHistory::Separator("*"));
         }
         self.history.append(&mut rhs.history);
         RollResult {
@@ -176,7 +178,7 @@ impl Div for RollResult {
 
     fn div(mut self, mut rhs: Self) -> Self::Output {
         if !rhs.history.is_empty() {
-            self.history.push(RollHistory::Separator);
+            self.history.push(RollHistory::Separator("/"));
         }
         self.history.append(&mut rhs.history);
         RollResult {
@@ -191,28 +193,34 @@ impl Div for RollResult {
 impl Display for RollResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "`")?;
-        self.history
-            .iter()
-            .try_for_each::<_, std::fmt::Result>(|v| {
-                match v {
-                    RollHistory::Roll(v) => {
-                        write!(f, "[")?;
-                        let len = v.len();
-                        v.iter().enumerate().try_for_each(|(i, r)| {
-                            if i == len - 1 {
-                                write!(f, "{}", r)
-                            } else {
-                                write!(f, "{}, ", r)
-                            }
-                        })?;
-                        write!(f, "]")?;
+        if self.history.is_empty() {
+            write!(f, "{}", self.total)?;
+        } else {
+            self.history
+                .iter()
+                .try_for_each::<_, std::fmt::Result>(|v| {
+                    match v {
+                        RollHistory::Roll(v) => {
+                            write!(f, "[")?;
+                            let len = v.len();
+                            v.iter().enumerate().try_for_each(|(i, r)| {
+                                if i == len - 1 {
+                                    write!(f, "{}", r)
+                                } else {
+                                    write!(f, "{}, ", r)
+                                }
+                            })?;
+                            write!(f, "]")?;
+                        }
+                        RollHistory::Value(v) => write!(f, "{}", v)?,
+                        RollHistory::Separator(s) => write!(f, " {} ", s)?,
                     }
-                    RollHistory::Separator => write!(f, " | ")?,
-                }
 
-                Ok(())
-            })?;
-        write!(f, "` Result: {}", self.get_total())?;
+                    Ok(())
+                })?;
+        }
+
+        write!(f, "` Result: **{}**", self.get_total())?;
 
         if let Some(reason) = &self.reason {
             write!(f, ", Reason: `{}`", reason)?;
