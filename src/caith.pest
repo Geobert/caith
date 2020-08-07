@@ -6,7 +6,9 @@ sub = { "-" }
 mul = { "*" }
 div = { "/" }
 
-dice = { nb_dice? ~ (roll ~ number) ~ option* ~ target_failure{, 2} }
+dice = { nb_dice? ~ (roll ~ dice_side) ~ option* ~ target_failure{, 2} }
+dice_side = _{ number | fudge }
+fudge = { "F" | "f" }
 roll = { "d" | "D" }
 option = _{ explode | i_explode | reroll | i_reroll | keep_hi | keep_lo | drop_hi | drop_lo }
 target_failure = _{ target | failure }

@@ -11,6 +11,7 @@ use crate::parser::TotalModifier;
 #[derive(Debug)]
 pub enum RollHistory {
     Roll(Vec<u64>),
+    Fudge(Vec<u64>),
     Value(u64),
     Separator(&'static str),
 }
@@ -66,10 +67,14 @@ impl RollResult {
     }
 
     /// Add a step in the history
-    pub(crate) fn add_history(&mut self, mut history: Vec<u64>) {
+    pub(crate) fn add_history(&mut self, mut history: Vec<u64>, is_fudge: bool) {
         self.dirty = true;
         history.sort_unstable_by(|a, b| b.cmp(a));
-        self.history.push(RollHistory::Roll(history))
+        self.history.push(if is_fudge {
+            RollHistory::Fudge(history)
+        } else {
+            RollHistory::Roll(history)
+        })
     }
 
     /// Compute the total value according to some modifier
@@ -78,7 +83,7 @@ impl RollResult {
             self.dirty = false;
             let mut flat = self.history.iter().fold(Vec::new(), |mut acc, h| {
                 match h {
-                    RollHistory::Roll(r) => {
+                    RollHistory::Roll(r) | RollHistory::Fudge(r) => {
                         let mut c = r.clone();
                         acc.append(&mut c);
                     }
@@ -96,10 +101,13 @@ impl RollResult {
                 TotalModifier::KeepLo(n) => &flat[..n],
                 TotalModifier::DropHi(n) => &flat[..flat.len() - n],
                 TotalModifier::DropLo(n) => &flat[n..],
-                TotalModifier::None | TotalModifier::TargetFailure(_, _) => flat.as_slice(),
+                TotalModifier::None | TotalModifier::TargetFailure(_, _) | TotalModifier::Fudge => {
+                    flat.as_slice()
+                }
             };
-            self.total = if let TotalModifier::TargetFailure(t, f) = modifier {
-                slice.iter().fold(0, |acc, x| {
+
+            self.total = match modifier {
+                TotalModifier::TargetFailure(t, f) => slice.iter().fold(0, |acc, x| {
                     if *x >= t {
                         acc + 1
                     } else if *x <= f {
@@ -107,9 +115,17 @@ impl RollResult {
                     } else {
                         acc
                     }
-                })
-            } else {
-                slice.iter().sum::<u64>() as i64
+                }),
+                TotalModifier::Fudge => slice.iter().fold(0, |acc, x| {
+                    if *x <= 2 {
+                        acc - 1
+                    } else if *x <= 4 {
+                        acc
+                    } else {
+                        acc + 1
+                    }
+                }),
+                _ => slice.iter().sum::<u64>() as i64,
             };
         }
 
@@ -204,6 +220,25 @@ impl Display for RollResult {
                             write!(f, "[")?;
                             let len = v.len();
                             v.iter().enumerate().try_for_each(|(i, r)| {
+                                if i == len - 1 {
+                                    write!(f, "{}", r)
+                                } else {
+                                    write!(f, "{}, ", r)
+                                }
+                            })?;
+                            write!(f, "]")?;
+                        }
+                        RollHistory::Fudge(v) => {
+                            write!(f, "[")?;
+                            let len = v.len();
+                            v.iter().enumerate().try_for_each(|(i, r)| {
+                                let r = if *r <= 2 {
+                                    "-"
+                                } else if *r <= 4 {
+                                    "▢"
+                                } else {
+                                    "+"
+                                };
                                 if i == len - 1 {
                                     write!(f, "{}", r)
                                 } else {

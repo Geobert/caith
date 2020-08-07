@@ -31,6 +31,7 @@ pub(crate) enum TotalModifier {
     DropHi(usize),
     DropLo(usize),
     TargetFailure(u64, u64),
+    Fudge,
     None,
 }
 
@@ -47,10 +48,10 @@ fn compute_explode(
 ) -> (TotalModifier, Vec<u64>) {
     let value = extract_option_value(option);
     let nb = res.iter().filter(|x| **x == value).count() as u64;
-    rolls.add_history(res.clone());
+    rolls.add_history(res.clone(), false);
     let res = if nb > 0 {
         let res = roll_dice(nb, sides);
-        rolls.add_history(res.clone());
+        rolls.add_history(res.clone(), false);
         res
     } else {
         res
@@ -65,13 +66,13 @@ fn compute_i_explode(
     option: Pair<Rule>,
 ) -> (TotalModifier, Vec<u64>) {
     let value = extract_option_value(option);
-    rolls.add_history(res.clone());
+    rolls.add_history(res.clone(), false);
     let mut nb = res.into_iter().filter(|x| *x == value).count() as u64;
     let mut res = Vec::new();
     while nb > 0 {
         res = roll_dice(nb, sides);
         nb = res.iter().filter(|x| **x == value).count() as u64;
-        rolls.add_history(res.clone());
+        rolls.add_history(res.clone(), false);
     }
     (TotalModifier::None, res)
 }
@@ -97,7 +98,7 @@ fn compute_reroll(
         .collect();
 
     if has_rerolled {
-        rolls.add_history(res.clone());
+        rolls.add_history(res.clone(), false);
     }
     (TotalModifier::None, res)
 }
@@ -123,7 +124,7 @@ fn compute_i_reroll(
         .collect();
 
     if has_rerolled {
-        rolls.add_history(res.clone());
+        rolls.add_history(res.clone(), false);
     }
     (TotalModifier::None, res)
 }
@@ -141,22 +142,22 @@ fn compute_option(
         Rule::i_reroll => compute_i_reroll(rolls, sides, res, option),
         Rule::keep_hi => {
             let value = extract_option_value(option);
-            rolls.add_history(res.clone());
+            rolls.add_history(res.clone(), false);
             (TotalModifier::KeepHi(value as usize), res)
         }
         Rule::keep_lo => {
             let value = extract_option_value(option);
-            rolls.add_history(res.clone());
+            rolls.add_history(res.clone(), false);
             (TotalModifier::KeepLo(value as usize), res)
         }
         Rule::drop_hi => {
             let value = extract_option_value(option);
-            rolls.add_history(res.clone());
+            rolls.add_history(res.clone(), false);
             (TotalModifier::DropHi(value as usize), res)
         }
         Rule::drop_lo => {
             let value = extract_option_value(option);
-            rolls.add_history(res.clone());
+            rolls.add_history(res.clone(), false);
             (TotalModifier::DropLo(value as usize), res)
         }
         Rule::target => {
@@ -179,7 +180,7 @@ fn compute_option(
                 return Err("Not enough dice to keep or drop".into());
             }
         }
-        TotalModifier::None | TotalModifier::TargetFailure(_, _) => (),
+        TotalModifier::None | TotalModifier::TargetFailure(_, _) | TotalModifier::Fudge => (),
     }
     res.sort_unstable();
     let res = match modifier {
@@ -187,7 +188,7 @@ fn compute_option(
         TotalModifier::KeepLo(n) => res[..n].to_vec(),
         TotalModifier::DropHi(n) => res[..res.len() - n].to_vec(),
         TotalModifier::DropLo(n) => res[n..].to_vec(),
-        TotalModifier::None | TotalModifier::TargetFailure(_, _) => res,
+        TotalModifier::None | TotalModifier::TargetFailure(_, _) | TotalModifier::Fudge => res,
     };
     Ok(OptionResult { res, modifier })
 }
@@ -204,14 +205,19 @@ fn compute_roll(mut dice: Pairs<Rule>) -> Result<RollResult> {
         _ => unreachable!("{:?}", maybe_nb),
     };
 
-    let sides = dice.next().unwrap().as_str().parse::<u64>().unwrap();
+    let pair = dice.next().unwrap();
+    let (sides, is_fudge) = match pair.as_rule() {
+        Rule::number => (pair.as_str().parse::<u64>().unwrap(), false),
+        Rule::fudge => (6, true),
+        _ => unreachable!("{:?}", pair),
+    };
     if sides == 0 {
         return Err("Dice can't have 0 sides".into());
     }
     let mut res = roll_dice(nb, sides);
     let mut modifier = TotalModifier::None;
     let mut next_option = dice.next();
-    if next_option.is_some() {
+    if !is_fudge && next_option.is_some() {
         while next_option.is_some() {
             let option = next_option.unwrap();
             let opt_res = compute_option(&mut rolls, sides, res, option)?;
@@ -226,7 +232,7 @@ fn compute_roll(mut dice: Pairs<Rule>) -> Result<RollResult> {
                         }
                     }
                     _ => {
-                        rolls.add_history(res.clone());
+                        rolls.add_history(res.clone(), false);
                         opt_res.modifier
                     }
                 },
@@ -236,8 +242,12 @@ fn compute_roll(mut dice: Pairs<Rule>) -> Result<RollResult> {
         }
         rolls.compute_total(modifier);
     } else {
-        rolls.add_history(res);
-        rolls.compute_total(TotalModifier::None);
+        rolls.add_history(res, is_fudge);
+        rolls.compute_total(if is_fudge {
+            TotalModifier::Fudge
+        } else {
+            TotalModifier::None
+        });
     }
 
     Ok(rolls)

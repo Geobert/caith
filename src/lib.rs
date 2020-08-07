@@ -26,6 +26,6 @@ mod tests {
 
     #[test]
     fn sandbox_test() {
-        eprintln!("{}", roll("1d6e6  + 8 ! pouet").unwrap());
+        eprintln!("{}", roll("4dF ! pouet").unwrap());
     }
 }
