@@ -8,7 +8,7 @@ pub use error::*;
 use parser::{compute, RollParser, Rule};
 pub use rollresult::RollResult;
 
-/// Execute a roll command
+/// Compute a roll expression
 pub fn roll(input: &str) -> Result<RollResult> {
     let mut pairs = RollParser::parse(Rule::command, input)?;
     let mut roll_res = compute(pairs.next().unwrap().into_inner())?;
@@ -18,6 +18,12 @@ pub fn roll(input: &str) -> Result<RollResult> {
         }
     }
     Ok(roll_res)
+}
+
+/// Look for the first dice in expression and return it
+pub fn find_first_dice(input: &str) -> Result<String> {
+    let mut pairs = RollParser::parse(Rule::command, input)?;
+    parser::find_first_dice(pairs.next().unwrap().into_inner())
 }
 
 #[cfg(test)]

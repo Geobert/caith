@@ -1,3 +1,6 @@
+0.5.0
+- Add `find_first_dice`: look for the first dice of the expression and return it
+
 0.4.0
 - Support for Fudge/Fate dice
 

@@ -253,6 +253,7 @@ fn compute_roll(mut dice: Pairs<Rule>) -> Result<RollResult> {
     Ok(rolls)
 }
 
+// compute a whole roll expression
 pub(crate) fn compute(expr: Pairs<Rule>) -> Result<RollResult> {
     PREC_CLIMBER.climb(
         expr,
@@ -282,6 +283,22 @@ pub(crate) fn compute(expr: Pairs<Rule>) -> Result<RollResult> {
             (_, Err(e)) => Err(e),
         },
     )
+}
+
+pub(crate) fn find_first_dice(mut expr: Pairs<Rule>) -> Result<String> {
+    let mut next_pair = expr.next();
+    while next_pair.is_some() {
+        let pair = next_pair.unwrap();
+        match pair.as_rule() {
+            Rule::expr => return find_first_dice(pair.into_inner()),
+            Rule::dice => {
+                return Ok(pair.as_str().trim().to_owned());
+            }
+            _ => (),
+        }
+        next_pair = expr.next();
+    }
+    Err("No dice to roll".into())
 }
 
 fn roll_dice(num: u64, sides: u64) -> Vec<u64> {
