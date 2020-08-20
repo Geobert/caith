@@ -1,10 +1,10 @@
 [package]
 name = "caith"
-version = "0.5.0"
+version = "1.0.0"
 authors = ["Geobert Quach <geobert@protonmail.com>"]
 edition = "2018"
 description = "A dice roller library supporting many features"
-keywords = ["dice", "roller", "RPG", "game", "gaming"]
+keywords = ["dice", "roller", "RPG", "game", "gaming", "random", "rand"]
 categories = ["game-development", "games"]
 repository = "https://github.com/Geobert/caith"
 license = "MIT"
@@ -15,5 +15,4 @@ readme = "README.md"
 [dependencies]
 pest = "2.1.3"
 pest_derive = "2.1.0"
-once_cell = "1.4.0"
 rand = "0.7.3"

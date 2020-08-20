@@ -13,7 +13,7 @@ roll = { "d" | "D" }
 option = _{ explode | i_explode | reroll | i_reroll | keep_hi | keep_lo | drop_hi | drop_lo }
 target_failure = _{ target | failure }
 explode = { "e" ~ number }
-i_explode = { "ie" ~ number }
+i_explode = { ("ie" | "!") ~ number? }
 reroll = { "r" ~ number }
 i_reroll = { "ir" ~ number }
 keep_hi = { "K" ~ number }
@@ -26,7 +26,7 @@ failure =  { "f" ~ number }
 expr = { leaf ~ (op ~ leaf)* }
 leaf = _{ dice | number | "(" ~ expr ~ ")" }
 
-reason = { "!" ~ ANY* }
+reason = { ":" ~ ANY* }
 
 command = _{ SOI ~ expr ~ reason? ~ EOI }
 

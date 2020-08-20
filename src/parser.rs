@@ -1,4 +1,5 @@
-use once_cell::sync::Lazy;
+use std::sync::{Arc, Once, RwLock};
+
 use pest::{
     iterators::{Pair, Pairs},
     prec_climber::{Assoc, Operator, PrecClimber},
@@ -8,16 +9,6 @@ use rand::{thread_rng, Rng};
 
 use crate::error::Result;
 use crate::rollresult::RollResult;
-
-static PREC_CLIMBER: Lazy<PrecClimber<Rule>> = Lazy::new(|| {
-    use self::Assoc::*;
-    use self::Rule::*;
-
-    PrecClimber::new(vec![
-        Operator::new(add, Left) | Operator::new(sub, Left),
-        Operator::new(mul, Left) | Operator::new(div, Left),
-    ])
-});
 
 #[derive(Parser)]
 #[grammar = "caith.pest"]
@@ -40,13 +31,56 @@ struct OptionResult {
     modifier: TotalModifier,
 }
 
+// Struct to have a singleton of PrecClimber without using once_cell
+#[derive(Clone)]
+struct Climber {
+    inner: Arc<RwLock<PrecClimber<Rule>>>,
+}
+
+impl Climber {
+    fn climb<'i, P, F, G, T>(&self, pairs: P, primary: F, infix: G) -> T
+    where
+        P: Iterator<Item = Pair<'i, Rule>>,
+        F: FnMut(Pair<'i, Rule>) -> T,
+        G: FnMut(T, Pair<'i, Rule>, T) -> T,
+    {
+        self.inner.read().unwrap().climb(pairs, primary, infix)
+    }
+}
+
+fn get_climber() -> Climber {
+    static mut PREC_CLIMBER: *const Climber = 0 as *const Climber;
+    static ONCE: Once = Once::new();
+
+    unsafe {
+        ONCE.call_once(|| {
+            use self::Assoc::*;
+            use self::Rule::*;
+
+            // Make it
+            let singleton = Climber {
+                inner: Arc::new(RwLock::new(PrecClimber::new(vec![
+                    Operator::new(add, Left) | Operator::new(sub, Left),
+                    Operator::new(mul, Left) | Operator::new(div, Left),
+                ]))),
+            };
+
+            // Put it in the heap so it can outlive this call
+            PREC_CLIMBER = std::mem::transmute(Box::new(singleton));
+        });
+
+        // Now we give out a copy of the data that is safe to use concurrently.
+        (*PREC_CLIMBER).clone()
+    }
+}
+
 fn compute_explode(
     rolls: &mut RollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
 ) -> (TotalModifier, Vec<u64>) {
-    let value = extract_option_value(option);
+    let value = extract_option_value(option).unwrap_or(sides);
     let nb = res.iter().filter(|x| **x == value).count() as u64;
     rolls.add_history(res.clone(), false);
     let res = if nb > 0 {
@@ -65,7 +99,7 @@ fn compute_i_explode(
     res: Vec<u64>,
     option: Pair<Rule>,
 ) -> (TotalModifier, Vec<u64>) {
-    let value = extract_option_value(option);
+    let value = extract_option_value(option).unwrap_or(sides);
     rolls.add_history(res.clone(), false);
     let mut nb = res.into_iter().filter(|x| *x == value).count() as u64;
     let mut res = Vec::new();
@@ -83,7 +117,7 @@ fn compute_reroll(
     res: Vec<u64>,
     option: Pair<Rule>,
 ) -> (TotalModifier, Vec<u64>) {
-    let value = extract_option_value(option);
+    let value = extract_option_value(option).unwrap();
     let mut has_rerolled = false;
     let res: Vec<u64> = res
         .into_iter()
@@ -109,7 +143,7 @@ fn compute_i_reroll(
     res: Vec<u64>,
     option: Pair<Rule>,
 ) -> (TotalModifier, Vec<u64>) {
-    let value = extract_option_value(option);
+    let value = extract_option_value(option).unwrap();
     let mut has_rerolled = false;
     let res: Vec<u64> = res
         .into_iter()
@@ -141,31 +175,31 @@ fn compute_option(
         Rule::reroll => compute_reroll(rolls, sides, res, option),
         Rule::i_reroll => compute_i_reroll(rolls, sides, res, option),
         Rule::keep_hi => {
-            let value = extract_option_value(option);
+            let value = extract_option_value(option).unwrap();
             rolls.add_history(res.clone(), false);
             (TotalModifier::KeepHi(value as usize), res)
         }
         Rule::keep_lo => {
-            let value = extract_option_value(option);
+            let value = extract_option_value(option).unwrap();
             rolls.add_history(res.clone(), false);
             (TotalModifier::KeepLo(value as usize), res)
         }
         Rule::drop_hi => {
-            let value = extract_option_value(option);
+            let value = extract_option_value(option).unwrap();
             rolls.add_history(res.clone(), false);
             (TotalModifier::DropHi(value as usize), res)
         }
         Rule::drop_lo => {
-            let value = extract_option_value(option);
+            let value = extract_option_value(option).unwrap();
             rolls.add_history(res.clone(), false);
             (TotalModifier::DropLo(value as usize), res)
         }
         Rule::target => {
-            let value = extract_option_value(option);
+            let value = extract_option_value(option).unwrap();
             (TotalModifier::TargetFailure(value, 0), res)
         }
         Rule::failure => {
-            let value = extract_option_value(option);
+            let value = extract_option_value(option).unwrap();
             (TotalModifier::TargetFailure(0, value), res)
         }
         _ => unreachable!("{:#?}", option),
@@ -255,7 +289,7 @@ fn compute_roll(mut dice: Pairs<Rule>) -> Result<RollResult> {
 
 // compute a whole roll expression
 pub(crate) fn compute(expr: Pairs<Rule>) -> Result<RollResult> {
-    PREC_CLIMBER.climb(
+    get_climber().climb(
         expr,
         |pair: Pair<Rule>| match pair.as_rule() {
             Rule::number => Ok(RollResult::with_total(
@@ -285,20 +319,18 @@ pub(crate) fn compute(expr: Pairs<Rule>) -> Result<RollResult> {
     )
 }
 
-pub(crate) fn find_first_dice(mut expr: Pairs<Rule>) -> Result<String> {
+pub(crate) fn find_first_dice(expr: &mut Pairs<Rule>) -> Option<String> {
     let mut next_pair = expr.next();
     while next_pair.is_some() {
         let pair = next_pair.unwrap();
         match pair.as_rule() {
-            Rule::expr => return find_first_dice(pair.into_inner()),
-            Rule::dice => {
-                return Ok(pair.as_str().trim().to_owned());
-            }
+            Rule::expr => return find_first_dice(&mut pair.into_inner()),
+            Rule::dice => return Some(pair.as_str().trim().to_owned()),
             _ => (),
-        }
+        };
         next_pair = expr.next();
     }
-    Err("No dice to roll".into())
+    None
 }
 
 fn roll_dice(num: u64, sides: u64) -> Vec<u64> {
@@ -306,12 +338,9 @@ fn roll_dice(num: u64, sides: u64) -> Vec<u64> {
     (0..num).map(|_| rng.gen_range(1, sides + 1)).collect()
 }
 
-fn extract_option_value(option: Pair<Rule>) -> u64 {
+fn extract_option_value(option: Pair<Rule>) -> Option<u64> {
     option
         .into_inner()
         .next()
-        .unwrap()
-        .as_str()
-        .parse::<u64>()
-        .unwrap()
+        .map(|p| p.as_str().parse::<u64>().unwrap())
 }
