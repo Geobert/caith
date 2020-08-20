@@ -14,7 +14,7 @@ The different features are totally inspired by https://github.com/Humblemonk/Dic
 use caith::{roll, RollResult};
 
 // ...
-let result = roll("1d6 # initiative")?;
+let result = roll("1d6 : initiative")?;
 
 printf("{} ({})", result.get_total(), result.get_reason().unwrap());
 
