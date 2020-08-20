@@ -11,10 +11,10 @@ The different features are totally inspired by https://github.com/Humblemonk/Dic
 # Usage
 
 ```rust
-use caith::{roll, RollResult};
+use caith::{Roller, RollResult};
 
 // ...
-let result = roll("1d6 : initiative")?;
+let result = Roller::new("1d6 : initiative").unwrap().roll().unwrap();
 
 printf("{} ({})", result.get_total(), result.get_reason().unwrap());
 
