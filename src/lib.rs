@@ -16,8 +16,8 @@ const REASON_CHAR: char = ':';
 /// version) but it provides a stable API for the day `pest` can have a `Send` type as the parse
 /// result.
 ///
-/// see https://github.com/pest-parser/pest/issues/472
-/// and https://users.rust-lang.org/t/how-to-deal-with-external-type-which-is-send-and-sync/47530
+/// see [Pest's issue](https://github.com/pest-parser/pest/issues/472)
+/// and [Forum topic](https://users.rust-lang.org/t/how-to-deal-with-external-type-which-is-send-and-sync/47530)
 ///
 #[derive(Clone)]
 pub struct Roller(String);
@@ -69,6 +69,7 @@ impl Roller {
         &self.0
     }
 
+    /// Removes the reason from the Roller
     pub fn trim_reason(&mut self) {
         if let Some(idx) = self.0.find(REASON_CHAR) {
             self.0 = self.0[..idx].to_owned()
