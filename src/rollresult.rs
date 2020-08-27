@@ -8,7 +8,7 @@ use crate::parser::TotalModifier;
 /// In a RollResult history, we either have a vector of the roll, or a separator between different
 /// dices. Ex: `1d6 + 1d6`, we will have a RollHistory::Roll followed by RollHistory::Separator and
 /// another RollHistory::Roll
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RollHistory {
     Roll(Vec<u64>),
     Fudge(Vec<u64>),
@@ -17,7 +17,7 @@ pub enum RollHistory {
 }
 
 /// Carry the result of the roll and an history of the steps taken
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RollResult {
     /// Result of the roll. In the case of option `t` and/or `f` used, it's the number of `success -
     /// failure`
