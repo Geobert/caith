@@ -1,3 +1,6 @@
+1.0.1
+- RollResult and RollHistory are `Clone` (by mcpar-land)
+
 1.0.0
 - Add `Roller` to expose stable API for future optimization
 - BREAKING: Removed free function `roll` and `find_first_dice`, use `Roller` to get all the dices

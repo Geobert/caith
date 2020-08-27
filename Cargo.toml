@@ -1,6 +1,6 @@
 [package]
 name = "caith"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Geobert Quach <geobert@protonmail.com>"]
 edition = "2018"
 description = "A dice roller library supporting many features"
