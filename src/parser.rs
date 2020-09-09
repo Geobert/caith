@@ -80,7 +80,7 @@ fn compute_explode(
     option: Pair<Rule>,
 ) -> (TotalModifier, Vec<u64>) {
     let value = extract_option_value(option).unwrap_or(sides);
-    let nb = res.iter().filter(|x| **x == value).count() as u64;
+    let nb = res.iter().filter(|x| **x >= value).count() as u64;
     rolls.add_history(res.clone(), false);
     let res = if nb > 0 {
         let res = roll_dice(nb, sides);
@@ -100,11 +100,11 @@ fn compute_i_explode(
 ) -> (TotalModifier, Vec<u64>) {
     let value = extract_option_value(option).unwrap_or(sides);
     rolls.add_history(res.clone(), false);
-    let mut nb = res.into_iter().filter(|x| *x == value).count() as u64;
+    let mut nb = res.into_iter().filter(|x| *x >= value).count() as u64;
     let mut res = Vec::new();
     while nb > 0 {
         res = roll_dice(nb, sides);
-        nb = res.iter().filter(|x| **x == value).count() as u64;
+        nb = res.iter().filter(|x| **x >= value).count() as u64;
         rolls.add_history(res.clone(), false);
     }
     (TotalModifier::None, res)
@@ -334,7 +334,7 @@ pub(crate) fn find_first_dice(expr: &mut Pairs<Rule>) -> Option<String> {
     None
 }
 
-fn roll_dice(num: u64, sides: u64) -> Vec<u64> {
+pub(crate) fn roll_dice(num: u64, sides: u64) -> Vec<u64> {
     let mut rng = thread_rng();
     (0..num).map(|_| rng.gen_range(1, sides + 1)).collect()
 }
