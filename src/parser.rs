@@ -7,8 +7,7 @@ use pest::{
 use pest_derive::Parser;
 use rand::{thread_rng, Rng};
 
-use crate::error::Result;
-use crate::rollresult::RollResult;
+use crate::{error::Result, SingleRollResult};
 
 #[derive(Parser)]
 #[grammar = "caith.pest"]
@@ -75,7 +74,7 @@ fn get_climber() -> Climber {
 }
 
 fn compute_explode(
-    rolls: &mut RollResult,
+    rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
@@ -94,7 +93,7 @@ fn compute_explode(
 }
 
 fn compute_i_explode(
-    rolls: &mut RollResult,
+    rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
@@ -112,7 +111,7 @@ fn compute_i_explode(
 }
 
 fn compute_reroll(
-    rolls: &mut RollResult,
+    rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
@@ -138,7 +137,7 @@ fn compute_reroll(
 }
 
 fn compute_i_reroll(
-    rolls: &mut RollResult,
+    rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
@@ -164,7 +163,7 @@ fn compute_i_reroll(
 }
 
 fn compute_option(
-    rolls: &mut RollResult,
+    rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
@@ -227,8 +226,8 @@ fn compute_option(
     Ok(OptionResult { res, modifier })
 }
 
-fn compute_roll(mut dice: Pairs<Rule>) -> Result<RollResult> {
-    let mut rolls = RollResult::new();
+fn compute_roll(mut dice: Pairs<Rule>) -> Result<SingleRollResult> {
+    let mut rolls = SingleRollResult::new();
     let maybe_nb = dice.next().unwrap();
     let nb = match maybe_nb.as_rule() {
         Rule::nb_dice => {
@@ -288,18 +287,20 @@ fn compute_roll(mut dice: Pairs<Rule>) -> Result<RollResult> {
 }
 
 // compute a whole roll expression
-pub(crate) fn compute(expr: Pairs<Rule>) -> Result<RollResult> {
+pub(crate) fn compute(expr: Pairs<Rule>) -> Result<SingleRollResult> {
     get_climber().climb(
         expr,
         |pair: Pair<Rule>| match pair.as_rule() {
-            Rule::number => Ok(RollResult::with_total(
+            Rule::number => Ok(SingleRollResult::with_total(
                 pair.as_str().parse::<i64>().unwrap(),
             )),
             Rule::expr => compute(pair.into_inner()),
             Rule::dice => compute_roll(pair.into_inner()),
             _ => unreachable!("{:#?}", pair),
         },
-        |lhs: Result<RollResult>, op: Pair<Rule>, rhs: Result<RollResult>| match (lhs, rhs) {
+        |lhs: Result<SingleRollResult>, op: Pair<Rule>, rhs: Result<SingleRollResult>| match (
+            lhs, rhs,
+        ) {
             (Ok(lhs), Ok(rhs)) => match op.as_rule() {
                 Rule::add => Ok(lhs + rhs),
                 Rule::sub => Ok(lhs - rhs),

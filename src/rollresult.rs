@@ -16,38 +16,35 @@ pub enum RollHistory {
     Separator(&'static str),
 }
 
-/// Carry the result of the roll and an history of the steps taken
+/// Distinguish between a simple roll and a repeated roll using `^`
+#[derive(Debug, Clone)]
+pub enum RollResultType {
+    Single(SingleRollResult),
+    Repeated(Vec<SingleRollResult>),
+}
+
+/// A RollResult contains either a single roll result, or if the roll is repeated, a list of the
+/// same roll different results. And a reason if needed.
 #[derive(Debug, Clone)]
 pub struct RollResult {
-    /// Result of the roll. In the case of option `t` and/or `f` used, it's the number of `success -
-    /// failure`
-    total: i64,
-    /// History of the steps taken that lead to this result.
-    history: Vec<RollHistory>,
-    /// Any provided comment will be available here, without the starting `!`.
+    result: RollResultType,
     reason: Option<String>,
-    /// Internal usage field to avoid computing a total if it's already done.
-    dirty: bool,
 }
 
 impl RollResult {
-    /// Create an empty `RollResult`
-    pub(crate) fn new() -> Self {
-        Self {
-            total: 0,
-            history: Vec::new(),
+    /// Create a RollResult with only one single roll
+    pub fn new_single(r: SingleRollResult) -> Self {
+        RollResult {
+            result: RollResultType::Single(r),
             reason: None,
-            dirty: true,
         }
     }
 
-    /// Create a `RollResult` with already a total. Used to carry constant value
-    pub(crate) fn with_total(total: i64) -> Self {
-        Self {
-            total,
-            history: vec![RollHistory::Value(total as u64)],
+    /// Create a RollResult with a repeated roll results
+    pub fn new_repeated(v: Vec<SingleRollResult>) -> Self {
+        RollResult {
+            result: RollResultType::Repeated(v),
             reason: None,
-            dirty: false,
         }
     }
 
@@ -60,7 +57,40 @@ impl RollResult {
     pub fn get_reason(&self) -> Option<&String> {
         self.reason.as_ref()
     }
+}
 
+/// Carry the result of one roll and an history of the steps taken
+#[derive(Debug, Clone)]
+pub struct SingleRollResult {
+    /// Result of the roll. In the case of option `t` and/or `f` used, it's the number of `success -
+    /// failure`
+    total: i64,
+    /// History of the steps taken that lead to this result.
+    history: Vec<RollHistory>,
+    /// Internal usage field to avoid computing a total if it's already done.
+    dirty: bool,
+}
+
+impl SingleRollResult {
+    /// Create an empty `RollResult`
+    pub(crate) fn new() -> Self {
+        Self {
+            total: 0,
+            history: Vec::new(),
+
+            dirty: true,
+        }
+    }
+
+    /// Create a `RollResult` with already a total. Used to carry constant value
+    pub(crate) fn with_total(total: i64) -> Self {
+        Self {
+            total,
+            history: vec![RollHistory::Value(total as u64)],
+
+            dirty: false,
+        }
+    }
     /// Get the history of the result
     pub fn get_history(&self) -> &Vec<RollHistory> {
         &self.history
@@ -74,7 +104,7 @@ impl RollResult {
             RollHistory::Fudge(history)
         } else {
             RollHistory::Roll(history)
-        })
+        });
     }
 
     /// Compute the total value according to some modifier
@@ -136,71 +166,125 @@ impl RollResult {
     pub fn get_total(&self) -> i64 {
         self.total
     }
+
+    /// Turn the `RollResult` to a readable String, with or without markdown formatting.
+    pub fn to_string(&self, md: bool) -> String {
+        if self.history.is_empty() {
+            if md {
+                format!("`{}`", self.total)
+            } else {
+                format!("{}", self.total)
+            }
+        } else {
+            let s = self.history.iter().fold(
+                String::from(if md { "`" } else { "" }),
+                |mut s, v| match v {
+                    RollHistory::Roll(v) => {
+                        s.push('[');
+                        let len = v.len();
+                        v.iter().enumerate().for_each(|(i, r)| {
+                            s.push_str(&r.to_string());
+                            if i < len - 1 {
+                                s.push_str(", ");
+                            }
+                        });
+                        s.push(']');
+                        s
+                    }
+                    RollHistory::Fudge(v) => {
+                        s.push('[');
+                        let len = v.len();
+                        v.iter().enumerate().for_each(|(i, r)| {
+                            let r = if *r <= 2 {
+                                "-"
+                            } else if *r <= 4 {
+                                "▢"
+                            } else {
+                                "+"
+                            };
+                            s.push_str(r);
+                            if i < len - 1 {
+                                s.push_str(", ");
+                            }
+                        });
+                        s.push(']');
+                        s
+                    }
+                    RollHistory::Value(v) => {
+                        s.push_str(&v.to_string());
+                        s
+                    }
+                    RollHistory::Separator(sep) => {
+                        s.push_str(sep);
+                        s
+                    }
+                },
+            );
+            format!(
+                "{0}{1} Result: {2}{3}{2}",
+                s,
+                if md { "`" } else { "" },
+                if md { "**" } else { "" },
+                self.get_total()
+            )
+        }
+    }
 }
 
-impl Add for RollResult {
+fn merge_history(left: &mut SingleRollResult, right: &mut SingleRollResult, op: &'static str) {
+    if !right.history.is_empty() {
+        left.history.push(RollHistory::Separator(op));
+        left.history.append(&mut right.history);
+    }
+}
+
+impl Add for SingleRollResult {
     type Output = Self;
 
     fn add(mut self, mut rhs: Self) -> Self::Output {
-        if !rhs.history.is_empty() {
-            self.history.push(RollHistory::Separator("+"));
-        }
-        self.history.append(&mut rhs.history);
-        RollResult {
+        merge_history(&mut self, &mut rhs, " + ");
+        SingleRollResult {
             total: self.total + rhs.total,
             history: self.history,
-            reason: self.reason,
             dirty: false,
         }
     }
 }
 
-impl Sub for RollResult {
+impl Sub for SingleRollResult {
     type Output = Self;
 
     fn sub(mut self, mut rhs: Self) -> Self::Output {
-        if !rhs.history.is_empty() {
-            self.history.push(RollHistory::Separator("-"));
-        }
-        self.history.append(&mut rhs.history);
-        RollResult {
+        merge_history(&mut self, &mut rhs, " - ");
+        SingleRollResult {
             total: self.total - rhs.total,
             history: self.history,
-            reason: self.reason,
             dirty: false,
         }
     }
 }
 
-impl Mul for RollResult {
+impl Mul for SingleRollResult {
     type Output = Self;
 
     fn mul(mut self, mut rhs: Self) -> Self::Output {
-        if !rhs.history.is_empty() {
-            self.history.push(RollHistory::Separator("*"));
-        }
-        self.history.append(&mut rhs.history);
-        RollResult {
+        merge_history(&mut self, &mut rhs, " * ");
+        SingleRollResult {
             total: self.total * rhs.total,
             history: self.history,
-            reason: self.reason,
             dirty: false,
         }
     }
 }
 
-impl Div for RollResult {
+impl Div for SingleRollResult {
     type Output = Self;
 
     fn div(mut self, mut rhs: Self) -> Self::Output {
-        if !rhs.history.is_empty() {
-            self.history.push(RollHistory::Separator("/"));
-        }
-        self.history.append(&mut rhs.history);
-        RollResult {
+        merge_history(&mut self, &mut rhs, " / ");
+        SingleRollResult {
             total: self.total / rhs.total,
             history: self.history,
-            reason: self.reason,
             dirty: false,
         }
     }
@@ -208,58 +292,21 @@ impl Div for RollResult {
 
 impl Display for RollResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "`")?;
-        if self.history.is_empty() {
-            write!(f, "{}", self.total)?;
-        } else {
-            self.history
-                .iter()
-                .try_for_each::<_, std::fmt::Result>(|v| {
-                    match v {
-                        RollHistory::Roll(v) => {
-                            write!(f, "[")?;
-                            let len = v.len();
-                            v.iter().enumerate().try_for_each(|(i, r)| {
-                                if i == len - 1 {
-                                    write!(f, "{}", r)
-                                } else {
-                                    write!(f, "{}, ", r)
-                                }
-                            })?;
-                            write!(f, "]")?;
-                        }
-                        RollHistory::Fudge(v) => {
-                            write!(f, "[")?;
-                            let len = v.len();
-                            v.iter().enumerate().try_for_each(|(i, r)| {
-                                let r = if *r <= 2 {
-                                    "-"
-                                } else if *r <= 4 {
-                                    "▢"
-                                } else {
-                                    "+"
-                                };
-                                if i == len - 1 {
-                                    write!(f, "{}", r)
-                                } else {
-                                    write!(f, "{}, ", r)
-                                }
-                            })?;
-                            write!(f, "]")?;
-                        }
-                        RollHistory::Value(v) => write!(f, "{}", v)?,
-                        RollHistory::Separator(s) => write!(f, " {} ", s)?,
-                    }
-
-                    Ok(())
-                })?;
+        match &self.result {
+            RollResultType::Single(roll_result) => {
+                write!(f, "{}", roll_result.to_string(true))?;
+            }
+            RollResultType::Repeated(repeated_result) => {
+                repeated_result
+                    .iter()
+                    .try_for_each(|res| write!(f, "{}\n", res.to_string(true)))?;
+            }
         }
-
-        write!(f, "` Result: **{}**", self.get_total())?;
 
         if let Some(reason) = &self.reason {
             write!(f, ", Reason: `{}`", reason)?;
         }
+
         Ok(())
     }
 }
