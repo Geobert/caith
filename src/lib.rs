@@ -57,6 +57,16 @@ impl Roller {
                     RollResult::new_repeated(results?)
                 }
             }
+            Rule::ova => {
+                let mut pairs = expr_type.into_inner();
+                let number = pairs.next().unwrap().as_str().parse::<i64>().unwrap();
+                if number == 0 {
+                    return Err("Can't roll 0 dices".into());
+                } else {
+                    let res = parser::roll_dice(number.abs() as u64, 6);
+                    Roller::compute_ova(res, number)
+                }
+            }
             _ => unreachable!(),
         };
 
@@ -66,6 +76,32 @@ impl Roller {
             }
         }
         Ok(roll_res)
+    }
+
+    fn compute_ova(mut res: Vec<u64>, number: i64) -> RollResult {
+        res.sort_unstable();
+        let total = if number > 0 {
+            let mut last_side = 0;
+            let mut current_res = 0;
+            res.iter().fold(0, |acc, current| {
+                let current = *current;
+                if last_side != current {
+                    last_side = current;
+                    if acc > current_res {
+                        current_res = acc;
+                    }
+                    current
+                } else {
+                    acc + current
+                }
+            });
+            current_res
+        } else {
+            *res.first()
+                .expect("Impossible, that mean we rolled 0 dices")
+        };
+
+        RollResult::new_single(SingleRollResult::new_ova(total, res))
     }
 
     /// Get an iterator on the dices in the expression
@@ -121,11 +157,65 @@ mod tests {
 
     #[test]
     fn sandbox_test() {
-        let r = Roller::new("(2d6 + 6) ^ 8 : test").unwrap();
+        let r = Roller::new("12d6").unwrap();
         r.dices()
             .expect("Error while parsing")
             .for_each(|d| eprintln!("{}", d));
 
         eprintln!("{}\n{}", r.as_str(), r.roll().unwrap());
+    }
+
+    #[test]
+    fn get_repeat_test() {
+        let r = Roller::new("(2d6 + 6) ^ 8 : test").unwrap();
+        let roll_res = r.roll().unwrap();
+        match roll_res.get_result() {
+            rollresult::RollResultType::Single(_) => unreachable!(),
+            rollresult::RollResultType::Repeated(rep) => {
+                for res in rep.iter() {
+                    eprintln!("{}", res)
+                }
+            }
+        }
+        eprintln!();
+        for res in roll_res.as_repeated().unwrap().iter() {
+            eprintln!("{}", res)
+        }
+    }
+
+    #[test]
+    fn get_single_test() {
+        let r = Roller::new("2d6 + 6 : test").unwrap();
+        let roll_res = r.roll().unwrap();
+        match roll_res.get_result() {
+            rollresult::RollResultType::Single(res) => eprintln!("{}", res),
+            rollresult::RollResultType::Repeated(_) => unreachable!(),
+        }
+        eprintln!();
+        eprintln!("{}", roll_res.as_single().unwrap());
+    }
+
+    #[test]
+    fn ova_test() {
+        let res = vec![1, 1, 2, 4, 4, 4, 4, 5, 5, 5, 6];
+        assert_eq!(
+            16,
+            Roller::compute_ova(res, 1).as_single().unwrap().get_total()
+        );
+
+        let res = vec![1, 1, 2, 5, 5, 5, 6];
+        assert_eq!(
+            1,
+            Roller::compute_ova(res, -1)
+                .as_single()
+                .unwrap()
+                .get_total()
+        );
+
+        let r = Roller::new("ova(12)").unwrap();
+        eprintln!("{}", r.roll().unwrap());
+
+        let r = Roller::new("ova(-5)").unwrap();
+        eprintln!("{}", r.roll().unwrap());
     }
 }

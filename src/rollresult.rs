@@ -57,6 +57,24 @@ impl RollResult {
     pub fn get_reason(&self) -> Option<&String> {
         self.reason.as_ref()
     }
+
+    pub fn get_result(&self) -> &RollResultType {
+        &self.result
+    }
+
+    pub fn as_single(&self) -> Option<&SingleRollResult> {
+        match &self.result {
+            RollResultType::Single(result) => Some(result),
+            RollResultType::Repeated(_) => None,
+        }
+    }
+
+    pub fn as_repeated(&self) -> Option<&Vec<SingleRollResult>> {
+        match &self.result {
+            RollResultType::Single(_) => None,
+            RollResultType::Repeated(results) => Some(&results),
+        }
+    }
 }
 
 /// Carry the result of one roll and an history of the steps taken
@@ -77,7 +95,6 @@ impl SingleRollResult {
         Self {
             total: 0,
             history: Vec::new(),
-
             dirty: true,
         }
     }
@@ -87,10 +104,18 @@ impl SingleRollResult {
         Self {
             total,
             history: vec![RollHistory::Value(total as u64)],
-
             dirty: false,
         }
     }
+
+    pub(crate) fn new_ova(total: u64, history: Vec<u64>) -> Self {
+        Self {
+            total: total as i64,
+            history: vec![RollHistory::Roll(history)],
+            dirty: false,
+        }
+    }
+
     /// Get the history of the result
     pub fn get_history(&self) -> &Vec<RollHistory> {
         &self.history
@@ -299,7 +324,7 @@ impl Display for RollResult {
             RollResultType::Repeated(repeated_result) => {
                 repeated_result
                     .iter()
-                    .try_for_each(|res| write!(f, "{}\n", res.to_string(true)))?;
+                    .try_for_each(|res| writeln!(f, "{}", res.to_string(true)))?;
             }
         }
 
@@ -307,6 +332,13 @@ impl Display for RollResult {
             write!(f, ", Reason: `{}`", reason)?;
         }
 
+        Ok(())
+    }
+}
+
+impl Display for SingleRollResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string(true))?;
         Ok(())
     }
 }

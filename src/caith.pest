@@ -27,9 +27,10 @@ repeated_expr = { "(" ~ expr ~ ")" ~ "^" ~ number }
 
 expr = { leaf ~ (op ~ leaf)* }
 leaf = _{ dice | number | "(" ~ expr ~ ")" }
-
+ova = { "ova" ~ "(" ~ integer ~")" }
+integer = { ("+" | "-")? ~ number }
 reason = { ":" ~ ANY* }
 
-command = _{ SOI ~ (repeated_expr | expr) ~ reason? ~ EOI }
+command = _{ SOI ~ (ova | repeated_expr | expr) ~ reason? ~ EOI }
 
 WHITESPACE = _{ " " | " " }
