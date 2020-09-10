@@ -59,10 +59,12 @@ impl RollResult {
         self.reason.as_ref()
     }
 
+    /// Return the result
     pub fn get_result(&self) -> &RollResultType {
         &self.result
     }
 
+    /// If the result is a single roll, it will return it
     pub fn as_single(&self) -> Option<&SingleRollResult> {
         match &self.result {
             RollResultType::Single(result) => Some(result),
@@ -70,6 +72,7 @@ impl RollResult {
         }
     }
 
+    /// If the result is a repeated roll, it will return it
     pub fn as_repeated(&self) -> Option<&RepeatedRollResult> {
         match &self.result {
             RollResultType::Single(_) => None,
@@ -78,6 +81,7 @@ impl RollResult {
     }
 }
 
+/// Represent a Repeated roll. Can store the sum of all the roll if asked to.
 #[derive(Debug, Clone)]
 pub struct RepeatedRollResult {
     rolls: Vec<SingleRollResult>,
@@ -89,6 +93,13 @@ impl Deref for RepeatedRollResult {
 
     fn deref(&self) -> &Self::Target {
         &self.rolls
+    }
+}
+
+impl RepeatedRollResult {
+    /// If the repeated roll was asked with a total, this will return the computed total.
+    pub fn get_total(&self) -> Option<i64> {
+        self.total
     }
 }
 
@@ -123,6 +134,7 @@ impl SingleRollResult {
         }
     }
 
+    /// Create a OVA result
     pub(crate) fn new_ova(total: u64, history: Vec<u64>) -> Self {
         Self {
             total: total as i64,

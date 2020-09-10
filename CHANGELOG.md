@@ -1,3 +1,19 @@
+2.0.0
+- NEW & BREAKING: support repeat a roll x times: `(2d6 + 6) ^ 8` will roll `2d6 + 6` eight times
+    - to store this, `RollResult` has been refactored and break a bit of the API. To
+      convert your code, either you were only using the `impl Display` and nothing change,
+      but if you were calling some method on `RollResult` you'll need to adapt your code:
+      ```rust
+      let result = Roller::new("1d6 : initiative").unwrap().roll().unwrap();
+      let result = result.as_single().unwrap();
+      // old code
+      ```
+- NEW: repeated rolls can be summed: `(2d6 + 2) ^+ 6` will roll `2d6 + 2` six times and
+  sum all the results.
+- CHANGED: When specifying an explosion value, if the dice result is >= the value, it
+  explodes. (It was exploding on exactly the value before, which made no sense)
+- NEW: OVA roll support: `ova(12)` or `ova(-5)`
+
 1.0.1
 - RollResult and RollHistory are `Clone` (by mcpar-land)
 

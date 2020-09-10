@@ -11,13 +11,10 @@ The different features are totally inspired by https://github.com/Humblemonk/Dic
 # Usage
 
 ```rust
-use caith::{Roller, RollResult};
+use caith::{Roller, RollResult, RollResultType};
 
 // ...
 let result = Roller::new("1d6 : initiative").unwrap().roll().unwrap();
-
-printf("{} ({})", result.get_total(), result.get_reason().unwrap());
-
 printf("{}", result);
 ```
 
@@ -46,6 +43,15 @@ t# : minimum value to count as success
 
 Failure:
 f# : value under which it's counted as failure
+
+Repeatition:
+a roll can be repeated with `^` operator: `(2d6 + 6) ^ 8` will roll eight times the expression.
+
+Summed repeatition:
+with the `^+` operator, the roll will be repeated and all the totals summed.
+
+OVA roll:
+positive: `ova(12)` or negative: `ova(-5)`
 
 Reason:
 : : Any text after `:` will be a comment
