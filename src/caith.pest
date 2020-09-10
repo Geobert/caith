@@ -23,7 +23,7 @@ drop_lo = { "d" ~ number }
 target =  { "t" ~ number }
 failure =  { "f" ~ number }
 
-repeated_expr = { "(" ~ expr ~ ")" ~ "^" ~ number }
+repeated_expr = { "(" ~ expr ~ ")" ~ "^" ~ (add)? ~ number }
 
 expr = { leaf ~ (op ~ leaf)* }
 leaf = _{ dice | number | "(" ~ expr ~ ")" }

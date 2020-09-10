@@ -44,7 +44,13 @@ impl Roller {
             Rule::repeated_expr => {
                 let mut pairs = expr_type.into_inner();
                 let expr = pairs.next().unwrap();
-                let number = pairs.next().unwrap().as_str().parse::<i64>().unwrap();
+                let maybe_add = pairs.next().unwrap();
+                let (number, sum_all) = match maybe_add.as_rule() {
+                    Rule::number => (maybe_add.as_str().parse::<i64>().unwrap(), false),
+                    Rule::add => (pairs.next().unwrap().as_str().parse::<i64>().unwrap(), true),
+                    _ => unreachable!(),
+                };
+                dbg!(&sum_all);
                 if number <= 0 {
                     return Err("Can't repeat 0 times or negatively".into());
                 } else {
@@ -54,7 +60,17 @@ impl Roller {
                             res.push(c);
                             Ok(res)
                         });
-                    RollResult::new_repeated(results?)
+                    let results = results?;
+                    let total = if sum_all {
+                        Some(
+                            results
+                                .iter()
+                                .fold(0, |acc, current| acc + current.get_total()),
+                        )
+                    } else {
+                        None
+                    };
+                    RollResult::new_repeated(results, total)
                 }
             }
             Rule::ova => {
@@ -181,6 +197,28 @@ mod tests {
         for res in roll_res.as_repeated().unwrap().iter() {
             eprintln!("{}", res)
         }
+
+        eprintln!();
+        eprintln!("{}", roll_res);
+    }
+
+    #[test]
+    fn get_repeat_sum_test() {
+        let r = Roller::new("(2d6 + 6) ^+ 2 : test").unwrap();
+        let roll_res = r.roll().unwrap();
+        match roll_res.get_result() {
+            rollresult::RollResultType::Single(_) => unreachable!(),
+            rollresult::RollResultType::Repeated(rep) => {
+                for res in rep.iter() {
+                    eprintln!("{}", res)
+                }
+            }
+        }
+        eprintln!();
+        // for res in roll_res.as_repeated().unwrap().iter() {
+        //     eprintln!("{}", res)
+        // }
+        eprintln!("{}", roll_res);
     }
 
     #[test]

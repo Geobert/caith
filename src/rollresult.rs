@@ -1,5 +1,6 @@
 use std::{
     fmt::Display,
+    ops::Deref,
     ops::{Add, Div, Mul, Sub},
 };
 
@@ -20,7 +21,7 @@ pub enum RollHistory {
 #[derive(Debug, Clone)]
 pub enum RollResultType {
     Single(SingleRollResult),
-    Repeated(Vec<SingleRollResult>),
+    Repeated(RepeatedRollResult),
 }
 
 /// A RollResult contains either a single roll result, or if the roll is repeated, a list of the
@@ -41,9 +42,9 @@ impl RollResult {
     }
 
     /// Create a RollResult with a repeated roll results
-    pub fn new_repeated(v: Vec<SingleRollResult>) -> Self {
+    pub fn new_repeated(v: Vec<SingleRollResult>, total: Option<i64>) -> Self {
         RollResult {
-            result: RollResultType::Repeated(v),
+            result: RollResultType::Repeated(RepeatedRollResult { rolls: v, total }),
             reason: None,
         }
     }
@@ -69,11 +70,25 @@ impl RollResult {
         }
     }
 
-    pub fn as_repeated(&self) -> Option<&Vec<SingleRollResult>> {
+    pub fn as_repeated(&self) -> Option<&RepeatedRollResult> {
         match &self.result {
             RollResultType::Single(_) => None,
             RollResultType::Repeated(results) => Some(&results),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RepeatedRollResult {
+    rolls: Vec<SingleRollResult>,
+    total: Option<i64>,
+}
+
+impl Deref for RepeatedRollResult {
+    type Target = Vec<SingleRollResult>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.rolls
     }
 }
 
@@ -192,6 +207,50 @@ impl SingleRollResult {
         self.total
     }
 
+    pub fn to_string_history(&self) -> String {
+        self.history.iter().fold(String::new(), |mut s, v| match v {
+            RollHistory::Roll(v) => {
+                s.push('[');
+                let len = v.len();
+                v.iter().enumerate().for_each(|(i, r)| {
+                    s.push_str(&r.to_string());
+                    if i < len - 1 {
+                        s.push_str(", ");
+                    }
+                });
+                s.push(']');
+                s
+            }
+            RollHistory::Fudge(v) => {
+                s.push('[');
+                let len = v.len();
+                v.iter().enumerate().for_each(|(i, r)| {
+                    let r = if *r <= 2 {
+                        "-"
+                    } else if *r <= 4 {
+                        "▢"
+                    } else {
+                        "+"
+                    };
+                    s.push_str(r);
+                    if i < len - 1 {
+                        s.push_str(", ");
+                    }
+                });
+                s.push(']');
+                s
+            }
+            RollHistory::Value(v) => {
+                s.push_str(&v.to_string());
+                s
+            }
+            RollHistory::Separator(sep) => {
+                s.push_str(sep);
+                s
+            }
+        })
+    }
+
     /// Turn the `RollResult` to a readable String, with or without markdown formatting.
     pub fn to_string(&self, md: bool) -> String {
         if self.history.is_empty() {
@@ -201,52 +260,9 @@ impl SingleRollResult {
                 format!("{}", self.total)
             }
         } else {
-            let s = self.history.iter().fold(
-                String::from(if md { "`" } else { "" }),
-                |mut s, v| match v {
-                    RollHistory::Roll(v) => {
-                        s.push('[');
-                        let len = v.len();
-                        v.iter().enumerate().for_each(|(i, r)| {
-                            s.push_str(&r.to_string());
-                            if i < len - 1 {
-                                s.push_str(", ");
-                            }
-                        });
-                        s.push(']');
-                        s
-                    }
-                    RollHistory::Fudge(v) => {
-                        s.push('[');
-                        let len = v.len();
-                        v.iter().enumerate().for_each(|(i, r)| {
-                            let r = if *r <= 2 {
-                                "-"
-                            } else if *r <= 4 {
-                                "▢"
-                            } else {
-                                "+"
-                            };
-                            s.push_str(r);
-                            if i < len - 1 {
-                                s.push_str(", ");
-                            }
-                        });
-                        s.push(']');
-                        s
-                    }
-                    RollHistory::Value(v) => {
-                        s.push_str(&v.to_string());
-                        s
-                    }
-                    RollHistory::Separator(sep) => {
-                        s.push_str(sep);
-                        s
-                    }
-                },
-            );
+            let s = self.to_string_history();
             format!(
-                "{0}{1} Result: {2}{3}{2}",
+                "{1}{0}{1} Result: {2}{3}{2}",
                 s,
                 if md { "`" } else { "" },
                 if md { "**" } else { "" },
@@ -321,11 +337,21 @@ impl Display for RollResult {
             RollResultType::Single(roll_result) => {
                 write!(f, "{}", roll_result.to_string(true))?;
             }
-            RollResultType::Repeated(repeated_result) => {
-                repeated_result
-                    .iter()
-                    .try_for_each(|res| writeln!(f, "{}", res.to_string(true)))?;
-            }
+            RollResultType::Repeated(repeated_result) => match repeated_result.total {
+                Some(total) => {
+                    repeated_result
+                        .rolls
+                        .iter()
+                        .try_for_each(|res| writeln!(f, "`{}`", res.to_string_history()))?;
+                    write!(f, "Sum: **{}**", total)?;
+                }
+                None => {
+                    repeated_result
+                        .rolls
+                        .iter()
+                        .try_for_each(|res| writeln!(f, "{}", res.to_string(true)))?;
+                }
+            },
         }
 
         if let Some(reason) = &self.reason {
