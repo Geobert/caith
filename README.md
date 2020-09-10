@@ -47,13 +47,13 @@ t# : minimum value to count as success
 Failure:
 f# : value under which it's counted as failure
 
-Repeatition:
+Repetition:
 a roll can be repeated with `^` operator: `(2d6 + 6) ^ 8` will roll eight times the expression.
 
-Summed repeatition:
+Summed repetition:
 with the `^+` operator, the roll will be repeated and all the totals summed.
 
-Sorted repeatition:
+Sorted repetition:
 with the `^#` operator, the roll will be repeated and sorted by total.
 
 OVA roll:
