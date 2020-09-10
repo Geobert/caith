@@ -50,6 +50,9 @@ a roll can be repeated with `^` operator: `(2d6 + 6) ^ 8` will roll eight times 
 Summed repeatition:
 with the `^+` operator, the roll will be repeated and all the totals summed.
 
+Sorted repeatition:
+with the `^#` operator, the roll will be repeated and sorted by total.
+
 OVA roll:
 positive: `ova(12)` or negative: `ova(-5)`
 

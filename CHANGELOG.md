@@ -10,6 +10,7 @@
       ```
 - NEW: repeated rolls can be summed: `(2d6 + 2) ^+ 6` will roll `2d6 + 2` six times and
   sum all the results.
+- NEW: repeated rolls can be sorted: `(2d6 + 2) ^# 6` will sort the rolls
 - NEW: OVA roll support: `ova(12)` or `ova(-5)`
 - CHANGED: When specifying an explosion value, if the dice result is >= the value, it
   explodes. (It was exploding on exactly the value before, which made no sense)

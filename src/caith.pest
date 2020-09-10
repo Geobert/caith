@@ -23,14 +23,14 @@ drop_lo = { "d" ~ number }
 target =  { "t" ~ number }
 failure =  { "f" ~ number }
 
-repeated_expr = { "(" ~ expr ~ ")" ~ "^" ~ (add)? ~ number }
+repeated_expr = { "(" ~ expr ~ ")" ~ "^" ~ (add | sort)? ~ number }
 
 expr = { leaf ~ (op ~ leaf)* }
 leaf = _{ dice | number | "(" ~ expr ~ ")" }
 ova = { "ova" ~ "(" ~ integer ~")" }
 integer = { ("+" | "-")? ~ number }
 reason = { ":" ~ ANY* }
-
+sort = { "#" }
 command = _{ SOI ~ (ova | repeated_expr | expr) ~ reason? ~ EOI }
 
 WHITESPACE = _{ " " | " " }

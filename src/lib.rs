@@ -43,10 +43,19 @@ impl Roller {
             Rule::repeated_expr => {
                 let mut pairs = expr_type.into_inner();
                 let expr = pairs.next().unwrap();
-                let maybe_add = pairs.next().unwrap();
-                let (number, sum_all) = match maybe_add.as_rule() {
-                    Rule::number => (maybe_add.as_str().parse::<i64>().unwrap(), false),
-                    Rule::add => (pairs.next().unwrap().as_str().parse::<i64>().unwrap(), true),
+                let maybe_option = pairs.next().unwrap();
+                let (number, sum_all, sort) = match maybe_option.as_rule() {
+                    Rule::number => (maybe_option.as_str().parse::<i64>().unwrap(), false, false),
+                    Rule::add => (
+                        pairs.next().unwrap().as_str().parse::<i64>().unwrap(),
+                        true,
+                        false,
+                    ),
+                    Rule::sort => (
+                        pairs.next().unwrap().as_str().parse::<i64>().unwrap(),
+                        false,
+                        true,
+                    ),
                     _ => unreachable!(),
                 };
                 if number <= 0 {
@@ -58,7 +67,10 @@ impl Roller {
                             res.push(c);
                             Ok(res)
                         });
-                    let results = results?;
+                    let mut results = results?;
+                    if sort {
+                        results.sort_unstable_by(|a, b| a.get_total().cmp(&b.get_total()));
+                    }
                     let total = if sum_all {
                         Some(
                             results
@@ -197,6 +209,14 @@ mod tests {
         }
 
         eprintln!();
+        eprintln!("{}", roll_res);
+    }
+
+    #[test]
+    fn get_repeat_sort_test() {
+        let r = Roller::new("(2d6 + 6) ^# 8 : test").unwrap();
+        let roll_res = r.roll().unwrap();
+
         eprintln!("{}", roll_res);
     }
 

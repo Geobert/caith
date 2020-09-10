@@ -348,6 +348,9 @@ impl Display for RollResult {
         match &self.result {
             RollResultType::Single(roll_result) => {
                 write!(f, "{}", roll_result.to_string(true))?;
+                if let Some(reason) = &self.reason {
+                    write!(f, ", Reason: `{}`", reason)?;
+                }
             }
             RollResultType::Repeated(repeated_result) => match repeated_result.total {
                 Some(total) => {
@@ -356,18 +359,20 @@ impl Display for RollResult {
                         .iter()
                         .try_for_each(|res| writeln!(f, "`{}`", res.to_string_history()))?;
                     write!(f, "Sum: **{}**", total)?;
+                    if let Some(reason) = &self.reason {
+                        write!(f, ", Reason: `{}`", reason)?;
+                    }
                 }
                 None => {
                     repeated_result
                         .rolls
                         .iter()
                         .try_for_each(|res| writeln!(f, "{}", res.to_string(true)))?;
+                    if let Some(reason) = &self.reason {
+                        write!(f, "Reason: `{}`", reason)?;
+                    }
                 }
             },
-        }
-
-        if let Some(reason) = &self.reason {
-            write!(f, ", Reason: `{}`", reason)?;
         }
 
         Ok(())
