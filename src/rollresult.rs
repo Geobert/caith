@@ -274,7 +274,7 @@ impl SingleRollResult {
         } else {
             let s = self.to_string_history();
             format!(
-                "{1}{0}{1} Result: {2}{3}{2}",
+                "{1}{0}{1} = {2}{3}{2}",
                 s,
                 if md { "`" } else { "" },
                 if md { "**" } else { "" },

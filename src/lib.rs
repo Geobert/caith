@@ -1,5 +1,4 @@
 use pest::{iterators::Pairs, Parser};
-use rollresult::RollResult;
 
 mod error;
 mod parser;
@@ -7,7 +6,7 @@ mod rollresult;
 pub use error::*;
 
 use parser::{RollParser, Rule};
-pub use rollresult::SingleRollResult;
+pub use rollresult::{RepeatedRollResult, RollResult, SingleRollResult};
 
 const REASON_CHAR: char = ':';
 
@@ -50,7 +49,6 @@ impl Roller {
                     Rule::add => (pairs.next().unwrap().as_str().parse::<i64>().unwrap(), true),
                     _ => unreachable!(),
                 };
-                dbg!(&sum_all);
                 if number <= 0 {
                     return Err("Can't repeat 0 times or negatively".into());
                 } else {
