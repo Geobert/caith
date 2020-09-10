@@ -6,9 +6,9 @@ use std::{
 
 use crate::parser::TotalModifier;
 
-/// In a RollResult history, we either have a vector of the roll, or a separator between different
-/// dices. Ex: `1d6 + 1d6`, we will have a RollHistory::Roll followed by RollHistory::Separator and
-/// another RollHistory::Roll
+/// In a `RollResult` history, we either have a vector of the roll, or a separator between different
+/// dices. Ex: `1d6 + 1d6`, we will have a [`RollHistory::Roll`] followed by [`RollHistory::Separator`] and
+/// another [`RollHistory::Roll`]
 #[derive(Debug, Clone)]
 pub enum RollHistory {
     Roll(Vec<u64>),
@@ -24,7 +24,7 @@ pub enum RollResultType {
     Repeated(RepeatedRollResult),
 }
 
-/// A RollResult contains either a single roll result, or if the roll is repeated, a list of the
+/// A `RollResult` contains either a single roll result, or if the roll is repeated, a list of the
 /// same roll different results. And a reason if needed.
 #[derive(Debug, Clone)]
 pub struct RollResult {
@@ -33,7 +33,7 @@ pub struct RollResult {
 }
 
 impl RollResult {
-    /// Create a RollResult with only one single roll
+    /// Create a `RollResult` with only one single roll
     pub fn new_single(r: SingleRollResult) -> Self {
         RollResult {
             result: RollResultType::Single(r),
@@ -41,7 +41,7 @@ impl RollResult {
         }
     }
 
-    /// Create a RollResult with a repeated roll results
+    /// Create a `RollResult` with a repeated roll results
     pub fn new_repeated(v: Vec<SingleRollResult>, total: Option<i64>) -> Self {
         RollResult {
             result: RollResultType::Repeated(RepeatedRollResult { rolls: v, total }),
@@ -81,7 +81,8 @@ impl RollResult {
     }
 }
 
-/// Represent a Repeated roll. Can store the sum of all the roll if asked to.
+/// Represent a repeated roll. Can store the sum of all the roll if asked to.
+/// Usually created through `RollResult::new_repeated()` function.
 #[derive(Debug, Clone)]
 pub struct RepeatedRollResult {
     rolls: Vec<SingleRollResult>,
@@ -104,6 +105,7 @@ impl RepeatedRollResult {
 }
 
 /// Carry the result of one roll and an history of the steps taken
+/// Usually created through `RollResult::new_single()` function.
 #[derive(Debug, Clone)]
 pub struct SingleRollResult {
     /// Result of the roll. In the case of option `t` and/or `f` used, it's the number of `success -
@@ -116,7 +118,7 @@ pub struct SingleRollResult {
 }
 
 impl SingleRollResult {
-    /// Create an empty `RollResult`
+    /// Create an empty `SingleRollResult`
     pub(crate) fn new() -> Self {
         Self {
             total: 0,
@@ -125,7 +127,7 @@ impl SingleRollResult {
         }
     }
 
-    /// Create a `RollResult` with already a total. Used to carry constant value
+    /// Create a `SingleRollResult` with already a total. Used to carry constant value.
     pub(crate) fn with_total(total: i64) -> Self {
         Self {
             total,
@@ -134,7 +136,7 @@ impl SingleRollResult {
         }
     }
 
-    /// Create a OVA result
+    /// Create a `SingleRollResult` with a history and a total. Used to carry an OVA result.
     pub(crate) fn new_ova(total: u64, history: Vec<u64>) -> Self {
         Self {
             total: total as i64,
@@ -219,6 +221,7 @@ impl SingleRollResult {
         self.total
     }
 
+    /// Turn the vector of `RollHistory` to a `String`
     pub fn to_string_history(&self) -> String {
         self.history.iter().fold(String::new(), |mut s, v| match v {
             RollHistory::Roll(v) => {

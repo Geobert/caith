@@ -1,3 +1,9 @@
+#![warn(missing_docs)]
+#![warn(intra_doc_link_resolution_failure)]
+//! `caith` is a dice roll expression parser and roller.
+//!
+//! See [README.md](https://github.com/Geobert/caith/blob/master/README.md) for more details
+
 use pest::{iterators::Pairs, Parser};
 
 mod error;
@@ -25,7 +31,7 @@ pub struct Roller(String);
 impl Roller {
     /// Store the input
     ///
-    /// At version 1.0.0, it always returns Ok(Self).
+    /// As of version 2.0.0, it always returns `Ok(Self)`.
     ///
     /// This is to have a stable API for further optimization where the parsing is done here (so it
     /// can fail) and saved, see `Roller` documentation above.
