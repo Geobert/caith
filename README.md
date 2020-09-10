@@ -6,7 +6,10 @@
 
 A dice roller library written in Rust.
 
-The different features are totally inspired by https://github.com/Humblemonk/DiceMaiden 
+The different features are totally inspired by https://github.com/Humblemonk/DiceMaiden
+and https://github.com/ArtemGr/Sidekick.
+
+[Dìsle](https://github.com/Geobert/disle/) is a Discord bot build upon `caith`.
 
 # Usage
 
