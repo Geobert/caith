@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn sandbox_test() {
-        let r = Roller::new("12d6").unwrap();
+        let r = Roller::new("2d6 + -4").unwrap();
         r.dices()
             .expect("Error while parsing")
             .for_each(|d| eprintln!("{}", d));

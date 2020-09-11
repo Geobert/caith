@@ -291,7 +291,7 @@ pub(crate) fn compute(expr: Pairs<Rule>) -> Result<SingleRollResult> {
     get_climber().climb(
         expr,
         |pair: Pair<Rule>| match pair.as_rule() {
-            Rule::number => Ok(SingleRollResult::with_total(
+            Rule::integer => Ok(SingleRollResult::with_total(
                 pair.as_str().parse::<i64>().unwrap(),
             )),
             Rule::expr => compute(pair.into_inner()),

@@ -1,3 +1,6 @@
+2.0.1
+- supports for signed number after an operator: `d20 + -4` is accepted.
+
 2.0.0
 - NEW & BREAKING: support repeat a roll x times: `(2d6 + 6) ^ 8` will roll `2d6 + 6` eight times
     - to store this, `RollResult` has been refactored and break a bit of the API. To

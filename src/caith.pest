@@ -26,7 +26,7 @@ failure =  { "f" ~ number }
 repeated_expr = { "(" ~ expr ~ ")" ~ "^" ~ (add | sort)? ~ number }
 
 expr = { leaf ~ (op ~ leaf)* }
-leaf = _{ dice | number | "(" ~ expr ~ ")" }
+leaf = _{ dice | integer | "(" ~ expr ~ ")" }
 ova = { "ova" ~ "(" ~ integer ~")" }
 integer = { ("+" | "-")? ~ number }
 reason = { ":" ~ ANY* }

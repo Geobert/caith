@@ -13,7 +13,7 @@ use crate::parser::TotalModifier;
 pub enum RollHistory {
     Roll(Vec<u64>),
     Fudge(Vec<u64>),
-    Value(u64),
+    Value(i64),
     Separator(&'static str),
 }
 
@@ -131,7 +131,7 @@ impl SingleRollResult {
     pub(crate) fn with_total(total: i64) -> Self {
         Self {
             total,
-            history: vec![RollHistory::Value(total as u64)],
+            history: vec![RollHistory::Value(total)],
             dirty: false,
         }
     }
@@ -168,7 +168,7 @@ impl SingleRollResult {
             let mut flat = self.history.iter().fold(Vec::new(), |mut acc, h| {
                 match h {
                     RollHistory::Roll(r) | RollHistory::Fudge(r) => {
-                        let mut c = r.clone();
+                        let mut c = r.iter().map(|u| *u as i64).collect();
                         acc.append(&mut c);
                     }
                     RollHistory::Value(v) => acc.push(*v),
@@ -192,9 +192,10 @@ impl SingleRollResult {
 
             self.total = match modifier {
                 TotalModifier::TargetFailure(t, f) => slice.iter().fold(0, |acc, x| {
-                    if *x >= t {
+                    let x = *x as u64;
+                    if x >= t {
                         acc + 1
-                    } else if *x <= f {
+                    } else if x <= f {
                         acc - 1
                     } else {
                         acc
@@ -209,7 +210,7 @@ impl SingleRollResult {
                         acc + 1
                     }
                 }),
-                _ => slice.iter().sum::<u64>() as i64,
+                _ => slice.iter().sum::<i64>(),
             };
         }
 
