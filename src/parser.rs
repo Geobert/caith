@@ -5,7 +5,7 @@ use pest::{
     prec_climber::{Assoc, Operator, PrecClimber},
 };
 use pest_derive::Parser;
-use rand::{thread_rng, Rng};
+use rand::Rng;
 
 use crate::{error::Result, SingleRollResult};
 
@@ -73,17 +73,18 @@ fn get_climber() -> Climber {
     }
 }
 
-fn compute_explode(
+fn compute_explode<RNG: Rng>(
     rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
+    rng: &mut RNG,
 ) -> (TotalModifier, Vec<u64>) {
     let value = extract_option_value(option).unwrap_or(sides);
     let nb = res.iter().filter(|x| **x >= value).count() as u64;
     rolls.add_history(res.clone(), false);
     let res = if nb > 0 {
-        let res = roll_dice(nb, sides);
+        let res = roll_dice(nb, sides, rng);
         rolls.add_history(res.clone(), false);
         res
     } else {
@@ -92,29 +93,31 @@ fn compute_explode(
     (TotalModifier::None, res)
 }
 
-fn compute_i_explode(
+fn compute_i_explode<RNG: Rng>(
     rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
+    rng: &mut RNG,
 ) -> (TotalModifier, Vec<u64>) {
     let value = extract_option_value(option).unwrap_or(sides);
     rolls.add_history(res.clone(), false);
     let mut nb = res.into_iter().filter(|x| *x >= value).count() as u64;
     let mut res = Vec::new();
     while nb > 0 {
-        res = roll_dice(nb, sides);
+        res = roll_dice(nb, sides, rng);
         nb = res.iter().filter(|x| **x >= value).count() as u64;
         rolls.add_history(res.clone(), false);
     }
     (TotalModifier::None, res)
 }
 
-fn compute_reroll(
+fn compute_reroll<RNG: Rng>(
     rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
+    rng: &mut RNG,
 ) -> (TotalModifier, Vec<u64>) {
     let value = extract_option_value(option).unwrap();
     let mut has_rerolled = false;
@@ -123,7 +126,7 @@ fn compute_reroll(
         .map(|x| {
             if x <= value {
                 has_rerolled = true;
-                roll_dice(1, sides)[0]
+                roll_dice(1, sides, rng)[0]
             } else {
                 x
             }
@@ -136,11 +139,12 @@ fn compute_reroll(
     (TotalModifier::None, res)
 }
 
-fn compute_i_reroll(
+fn compute_i_reroll<RNG: Rng>(
     rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
+    rng: &mut RNG,
 ) -> (TotalModifier, Vec<u64>) {
     let value = extract_option_value(option).unwrap();
     let mut has_rerolled = false;
@@ -150,7 +154,7 @@ fn compute_i_reroll(
             let mut x = x;
             while x <= value {
                 has_rerolled = true;
-                x = roll_dice(1, sides)[0]
+                x = roll_dice(1, sides, rng)[0]
             }
             x
         })
@@ -162,17 +166,18 @@ fn compute_i_reroll(
     (TotalModifier::None, res)
 }
 
-fn compute_option(
+fn compute_option<RNG: Rng>(
     rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<u64>,
     option: Pair<Rule>,
+    rng: &mut RNG,
 ) -> Result<OptionResult> {
     let (modifier, mut res) = match option.as_rule() {
-        Rule::explode => compute_explode(rolls, sides, res, option),
-        Rule::i_explode => compute_i_explode(rolls, sides, res, option),
-        Rule::reroll => compute_reroll(rolls, sides, res, option),
-        Rule::i_reroll => compute_i_reroll(rolls, sides, res, option),
+        Rule::explode => compute_explode(rolls, sides, res, option, rng),
+        Rule::i_explode => compute_i_explode(rolls, sides, res, option, rng),
+        Rule::reroll => compute_reroll(rolls, sides, res, option, rng),
+        Rule::i_reroll => compute_i_reroll(rolls, sides, res, option, rng),
         Rule::keep_hi => {
             let value = extract_option_value(option).unwrap();
             rolls.add_history(res.clone(), false);
@@ -226,7 +231,7 @@ fn compute_option(
     Ok(OptionResult { res, modifier })
 }
 
-fn compute_roll(mut dice: Pairs<Rule>) -> Result<SingleRollResult> {
+fn compute_roll<RNG: Rng>(mut dice: Pairs<Rule>, rng: &mut RNG) -> Result<SingleRollResult> {
     let mut rolls = SingleRollResult::new();
     let maybe_nb = dice.next().unwrap();
     let nb = match maybe_nb.as_rule() {
@@ -247,13 +252,13 @@ fn compute_roll(mut dice: Pairs<Rule>) -> Result<SingleRollResult> {
     if sides == 0 {
         return Err("Dice can't have 0 sides".into());
     }
-    let mut res = roll_dice(nb, sides);
+    let mut res = roll_dice(nb, sides, rng);
     let mut modifier = TotalModifier::None;
     let mut next_option = dice.next();
     if !is_fudge && next_option.is_some() {
         while next_option.is_some() {
             let option = next_option.unwrap();
-            let opt_res = compute_option(&mut rolls, sides, res, option)?;
+            let opt_res = compute_option(&mut rolls, sides, res, option, rng)?;
             res = opt_res.res;
             modifier = match opt_res.modifier {
                 TotalModifier::TargetFailure(t, f) => match modifier {
@@ -287,15 +292,15 @@ fn compute_roll(mut dice: Pairs<Rule>) -> Result<SingleRollResult> {
 }
 
 // compute a whole roll expression
-pub(crate) fn compute(expr: Pairs<Rule>) -> Result<SingleRollResult> {
+pub(crate) fn compute<RNG: Rng>(expr: Pairs<Rule>, rng: &mut RNG) -> Result<SingleRollResult> {
     get_climber().climb(
         expr,
         |pair: Pair<Rule>| match pair.as_rule() {
             Rule::integer => Ok(SingleRollResult::with_total(
                 pair.as_str().parse::<i64>().unwrap(),
             )),
-            Rule::expr => compute(pair.into_inner()),
-            Rule::dice => compute_roll(pair.into_inner()),
+            Rule::expr => compute(pair.into_inner(), rng),
+            Rule::dice => compute_roll(pair.into_inner(), rng),
             _ => unreachable!("{:#?}", pair),
         },
         |lhs: Result<SingleRollResult>, op: Pair<Rule>, rhs: Result<SingleRollResult>| match (
@@ -334,8 +339,7 @@ pub(crate) fn find_first_dice(expr: &mut Pairs<Rule>) -> Option<String> {
     None
 }
 
-pub(crate) fn roll_dice(num: u64, sides: u64) -> Vec<u64> {
-    let mut rng = thread_rng();
+pub(crate) fn roll_dice<RNG: Rng>(num: u64, sides: u64, rng: &mut RNG) -> Vec<u64> {
     (0..num).map(|_| rng.gen_range(1, sides + 1)).collect()
 }
 

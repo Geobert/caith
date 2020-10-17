@@ -1,10 +1,13 @@
 #![warn(missing_docs)]
-#![warn(intra_doc_link_resolution_failure)]
+#![warn(broken_intra_doc_links)]
 //! `caith` is a dice roll expression parser and roller.
 //!
 //! See [README.md](https://github.com/Geobert/caith/blob/master/README.md) for more details
 
-use pest::{iterators::Pairs, Parser};
+use pest::{
+    iterators::{Pair, Pairs},
+    Parser,
+};
 
 mod error;
 mod parser;
@@ -12,6 +15,7 @@ mod rollresult;
 pub use error::*;
 
 use parser::{RollParser, Rule};
+use rand::Rng;
 pub use rollresult::{RepeatedRollResult, RollResult, SingleRollResult};
 
 const REASON_CHAR: char = ':';
@@ -25,7 +29,7 @@ const REASON_CHAR: char = ':';
 /// see [Pest's issue](https://github.com/pest-parser/pest/issues/472)
 /// and [Forum topic](https://users.rust-lang.org/t/how-to-deal-with-external-type-which-is-send-and-sync/47530)
 ///
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Roller(String);
 
 impl Roller {
@@ -40,62 +44,25 @@ impl Roller {
         Ok(Roller(input.to_owned()))
     }
 
-    /// Evaluate and roll the dices
+    /// Evaluate and roll the dices with default Rng source (`rand::thread_rng()`)
     pub fn roll(&self) -> Result<RollResult> {
+        self.roll_with(&mut rand::thread_rng())
+    }
+
+    /// Evaluate and roll the dices with provided rng source
+    pub fn roll_with<RNG: Rng>(&self, rng: &mut RNG) -> Result<RollResult> {
         let mut pairs = RollParser::parse(Rule::command, &self.0)?;
         let expr_type = pairs.next().unwrap();
         let mut roll_res = match expr_type.as_rule() {
-            Rule::expr => RollResult::new_single(parser::compute(expr_type.into_inner())?),
-            Rule::repeated_expr => {
-                let mut pairs = expr_type.into_inner();
-                let expr = pairs.next().unwrap();
-                let maybe_option = pairs.next().unwrap();
-                let (number, sum_all, sort) = match maybe_option.as_rule() {
-                    Rule::number => (maybe_option.as_str().parse::<i64>().unwrap(), false, false),
-                    Rule::add => (
-                        pairs.next().unwrap().as_str().parse::<i64>().unwrap(),
-                        true,
-                        false,
-                    ),
-                    Rule::sort => (
-                        pairs.next().unwrap().as_str().parse::<i64>().unwrap(),
-                        false,
-                        true,
-                    ),
-                    _ => unreachable!(),
-                };
-                if number <= 0 {
-                    return Err("Can't repeat 0 times or negatively".into());
-                } else {
-                    let results: Result<Vec<SingleRollResult>> =
-                        (0..number).try_fold(Vec::new(), |mut res, _| {
-                            let c = parser::compute(expr.clone().into_inner())?;
-                            res.push(c);
-                            Ok(res)
-                        });
-                    let mut results = results?;
-                    if sort {
-                        results.sort_unstable_by(|a, b| a.get_total().cmp(&b.get_total()));
-                    }
-                    let total = if sum_all {
-                        Some(
-                            results
-                                .iter()
-                                .fold(0, |acc, current| acc + current.get_total()),
-                        )
-                    } else {
-                        None
-                    };
-                    RollResult::new_repeated(results, total)
-                }
-            }
+            Rule::expr => RollResult::new_single(parser::compute(expr_type.into_inner(), rng)?),
+            Rule::repeated_expr => Roller::process_repeated_expr(expr_type, rng)?,
             Rule::ova => {
                 let mut pairs = expr_type.into_inner();
                 let number = pairs.next().unwrap().as_str().parse::<i64>().unwrap();
                 if number == 0 {
                     return Err("Can't roll 0 dices".into());
                 } else {
-                    let res = parser::roll_dice(number.abs() as u64, 6);
+                    let res = parser::roll_dice(number.abs() as u64, 6, rng);
                     Roller::compute_ova(res, number)
                 }
             }
@@ -108,6 +75,50 @@ impl Roller {
             }
         }
         Ok(roll_res)
+    }
+
+    fn process_repeated_expr<RNG: Rng>(expr_type: Pair<Rule>, rng: &mut RNG) -> Result<RollResult> {
+        let mut pairs = expr_type.into_inner();
+        let expr = pairs.next().unwrap();
+        let maybe_option = pairs.next().unwrap();
+        let (number, sum_all, sort) = match maybe_option.as_rule() {
+            Rule::number => (maybe_option.as_str().parse::<i64>().unwrap(), false, false),
+            Rule::add => (
+                pairs.next().unwrap().as_str().parse::<i64>().unwrap(),
+                true,
+                false,
+            ),
+            Rule::sort => (
+                pairs.next().unwrap().as_str().parse::<i64>().unwrap(),
+                false,
+                true,
+            ),
+            _ => unreachable!(),
+        };
+        if number <= 0 {
+            Err("Can't repeat 0 times or negatively".into())
+        } else {
+            let results: Result<Vec<SingleRollResult>> =
+                (0..number).try_fold(Vec::new(), |mut res, _| {
+                    let c = parser::compute(expr.clone().into_inner(), rng)?;
+                    res.push(c);
+                    Ok(res)
+                });
+            let mut results = results?;
+            if sort {
+                results.sort_unstable_by(|a, b| a.get_total().cmp(&b.get_total()));
+            }
+            let total = if sum_all {
+                Some(
+                    results
+                        .iter()
+                        .fold(0, |acc, current| acc + current.get_total()),
+                )
+            } else {
+                None
+            };
+            Ok(RollResult::new_repeated(results, total))
+        }
     }
 
     fn compute_ova(mut res: Vec<u64>, number: i64) -> RollResult {
