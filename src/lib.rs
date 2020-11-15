@@ -16,7 +16,7 @@ pub use error::*;
 
 use parser::{RollParser, Rule};
 use rand::Rng;
-pub use rollresult::{RepeatedRollResult, RollResult, SingleRollResult};
+pub use rollresult::*;
 
 const REASON_CHAR: char = ':';
 
@@ -121,27 +121,27 @@ impl Roller {
         }
     }
 
-    fn compute_ova(mut res: Vec<u64>, number: i64) -> RollResult {
+    fn compute_ova(mut res: Vec<DiceResult>, number: i64) -> RollResult {
         res.sort_unstable();
         let total = if number > 0 {
             let mut last_side = 0;
             let mut current_res = 0;
             res.iter().fold(0, |acc, current| {
-                let current = *current;
-                if last_side != current {
-                    last_side = current;
+                if last_side != current.res {
+                    last_side = current.res;
                     if acc > current_res {
                         current_res = acc;
                     }
-                    current
+                    current.res
                 } else {
-                    acc + current
+                    acc + current.res
                 }
             });
             current_res
         } else {
-            *res.first()
+            res.first()
                 .expect("Impossible, that mean we rolled 0 dices")
+                .res
         };
 
         RollResult::new_single(SingleRollResult::new_ova(total, res))
@@ -270,13 +270,19 @@ mod tests {
 
     #[test]
     fn ova_test() {
-        let res = vec![1, 1, 2, 4, 4, 4, 4, 5, 5, 5, 6];
+        let res = vec![1, 1, 2, 4, 4, 4, 4, 5, 5, 5, 6]
+            .into_iter()
+            .map(|i| DiceResult::new(i as u64, 6))
+            .collect();
         assert_eq!(
             16,
             Roller::compute_ova(res, 1).as_single().unwrap().get_total()
         );
 
-        let res = vec![1, 1, 2, 5, 5, 5, 6];
+        let res = vec![1, 1, 2, 5, 5, 5, 6]
+            .into_iter()
+            .map(|i| DiceResult::new(i as u64, 6))
+            .collect();
         assert_eq!(
             1,
             Roller::compute_ova(res, -1)

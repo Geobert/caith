@@ -6,21 +6,91 @@ use std::{
 
 use crate::parser::TotalModifier;
 
+/// Used to mark a dice roll if its result is a critic
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum Critic {
+    /// Normal result
+    No,
+    /// Minimum reached
+    Min,
+    /// Maximum reached
+    Max,
+}
+
+/// Carry one dice result, and a marker field to say if it the result is a min, max, or none
+#[derive(Debug, Clone, Copy, Hash)]
+pub struct DiceResult {
+    /// The side of the dice that was rolled
+    pub res: u64,
+    /// If the result was remarkable (critic)
+    pub crit: Critic,
+}
+
+impl DiceResult {
+    /// Create a `DiceResult`
+    pub fn new(value: u64, sides: u64) -> Self {
+        DiceResult {
+            res: value,
+            crit: if value == sides {
+                Critic::Max
+            } else if value == 1 {
+                Critic::Min
+            } else {
+                Critic::No
+            },
+        }
+    }
+}
+
+impl PartialEq for DiceResult {
+    fn eq(&self, other: &Self) -> bool {
+        self.res == other.res
+    }
+}
+
+impl Eq for DiceResult {}
+
+impl PartialOrd for DiceResult {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
+impl Ord for DiceResult {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.res.cmp(&other.res)
+    }
+}
+
+impl Deref for DiceResult {
+    type Target = u64;
+
+    fn deref(&self) -> &Self::Target {
+        &self.res
+    }
+}
+
 /// In a `RollResult` history, we either have a vector of the roll, or a separator between different
 /// dices. Ex: `1d6 + 1d6`, we will have a [`RollHistory::Roll`] followed by [`RollHistory::Separator`] and
 /// another [`RollHistory::Roll`]
 #[derive(Debug, Clone)]
 pub enum RollHistory {
-    Roll(Vec<u64>),
+    /// A roll with normal dices
+    Roll(Vec<DiceResult>),
+    /// A roll with Fudge dices
     Fudge(Vec<u64>),
+    /// Was not a roll, but just a value
     Value(i64),
+    /// An operation between roll and/or value
     Separator(&'static str),
 }
 
 /// Distinguish between a simple roll and a repeated roll using `^`
 #[derive(Debug, Clone)]
 pub enum RollResultType {
+    /// A single roll
     Single(SingleRollResult),
+    /// An expression repeated multiple times (using the `^` operator)
     Repeated(RepeatedRollResult),
 }
 
@@ -137,7 +207,7 @@ impl SingleRollResult {
     }
 
     /// Create a `SingleRollResult` with a history and a total. Used to carry an OVA result.
-    pub(crate) fn new_ova(total: u64, history: Vec<u64>) -> Self {
+    pub(crate) fn new_ova(total: u64, history: Vec<DiceResult>) -> Self {
         Self {
             total: total as i64,
             history: vec![RollHistory::Roll(history)],
@@ -151,11 +221,11 @@ impl SingleRollResult {
     }
 
     /// Add a step in the history
-    pub(crate) fn add_history(&mut self, mut history: Vec<u64>, is_fudge: bool) {
+    pub(crate) fn add_history(&mut self, mut history: Vec<DiceResult>, is_fudge: bool) {
         self.dirty = true;
         history.sort_unstable_by(|a, b| b.cmp(a));
         self.history.push(if is_fudge {
-            RollHistory::Fudge(history)
+            RollHistory::Fudge(history.iter().map(|r| r.res).collect())
         } else {
             RollHistory::Roll(history)
         });
@@ -167,7 +237,11 @@ impl SingleRollResult {
             self.dirty = false;
             let mut flat = self.history.iter().fold(Vec::new(), |mut acc, h| {
                 match h {
-                    RollHistory::Roll(r) | RollHistory::Fudge(r) => {
+                    RollHistory::Roll(r) => {
+                        let mut c = r.iter().map(|u| u.res as i64).collect();
+                        acc.append(&mut c);
+                    }
+                    RollHistory::Fudge(r) => {
                         let mut c = r.iter().map(|u| *u as i64).collect();
                         acc.append(&mut c);
                     }
@@ -229,7 +303,7 @@ impl SingleRollResult {
                 s.push('[');
                 let len = v.len();
                 v.iter().enumerate().for_each(|(i, r)| {
-                    s.push_str(&r.to_string());
+                    s.push_str(&r.res.to_string());
                     if i < len - 1 {
                         s.push_str(", ");
                     }

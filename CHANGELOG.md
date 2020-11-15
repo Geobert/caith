@@ -1,3 +1,6 @@
+# 2.2.0
+- NEW: added `Critic` to mark a dice roll as critic
+
 # 2.1.0
 - NEW: added `Roller::roll_with` in order to provide an external `rand::Rng` (idea by
   [rardiol](https://github.com/rardiol))

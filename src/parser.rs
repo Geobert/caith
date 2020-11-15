@@ -7,7 +7,7 @@ use pest::{
 use pest_derive::Parser;
 use rand::Rng;
 
-use crate::{error::Result, SingleRollResult};
+use crate::{error::Result, DiceResult, SingleRollResult};
 
 #[derive(Parser)]
 #[grammar = "caith.pest"]
@@ -26,7 +26,7 @@ pub(crate) enum TotalModifier {
 }
 
 struct OptionResult {
-    res: Vec<u64>,
+    res: Vec<DiceResult>,
     modifier: TotalModifier,
 }
 
@@ -76,12 +76,12 @@ fn get_climber() -> Climber {
 fn compute_explode<RNG: Rng>(
     rolls: &mut SingleRollResult,
     sides: u64,
-    res: Vec<u64>,
+    res: Vec<DiceResult>,
     option: Pair<Rule>,
     rng: &mut RNG,
-) -> (TotalModifier, Vec<u64>) {
+) -> (TotalModifier, Vec<DiceResult>) {
     let value = extract_option_value(option).unwrap_or(sides);
-    let nb = res.iter().filter(|x| **x >= value).count() as u64;
+    let nb = res.iter().filter(|x| x.res >= value).count() as u64;
     rolls.add_history(res.clone(), false);
     let res = if nb > 0 {
         let res = roll_dice(nb, sides, rng);
@@ -96,17 +96,17 @@ fn compute_explode<RNG: Rng>(
 fn compute_i_explode<RNG: Rng>(
     rolls: &mut SingleRollResult,
     sides: u64,
-    res: Vec<u64>,
+    res: Vec<DiceResult>,
     option: Pair<Rule>,
     rng: &mut RNG,
-) -> (TotalModifier, Vec<u64>) {
+) -> (TotalModifier, Vec<DiceResult>) {
     let value = extract_option_value(option).unwrap_or(sides);
     rolls.add_history(res.clone(), false);
-    let mut nb = res.into_iter().filter(|x| *x >= value).count() as u64;
+    let mut nb = res.into_iter().filter(|x| x.res >= value).count() as u64;
     let mut res = Vec::new();
     while nb > 0 {
         res = roll_dice(nb, sides, rng);
-        nb = res.iter().filter(|x| **x >= value).count() as u64;
+        nb = res.iter().filter(|x| x.res >= value).count() as u64;
         rolls.add_history(res.clone(), false);
     }
     (TotalModifier::None, res)
@@ -115,16 +115,16 @@ fn compute_i_explode<RNG: Rng>(
 fn compute_reroll<RNG: Rng>(
     rolls: &mut SingleRollResult,
     sides: u64,
-    res: Vec<u64>,
+    res: Vec<DiceResult>,
     option: Pair<Rule>,
     rng: &mut RNG,
-) -> (TotalModifier, Vec<u64>) {
+) -> (TotalModifier, Vec<DiceResult>) {
     let value = extract_option_value(option).unwrap();
     let mut has_rerolled = false;
-    let res: Vec<u64> = res
+    let res: Vec<DiceResult> = res
         .into_iter()
         .map(|x| {
-            if x <= value {
+            if x.res <= value {
                 has_rerolled = true;
                 roll_dice(1, sides, rng)[0]
             } else {
@@ -142,17 +142,17 @@ fn compute_reroll<RNG: Rng>(
 fn compute_i_reroll<RNG: Rng>(
     rolls: &mut SingleRollResult,
     sides: u64,
-    res: Vec<u64>,
+    res: Vec<DiceResult>,
     option: Pair<Rule>,
     rng: &mut RNG,
-) -> (TotalModifier, Vec<u64>) {
+) -> (TotalModifier, Vec<DiceResult>) {
     let value = extract_option_value(option).unwrap();
     let mut has_rerolled = false;
-    let res: Vec<u64> = res
+    let res: Vec<DiceResult> = res
         .into_iter()
         .map(|x| {
             let mut x = x;
-            while x <= value {
+            while x.res <= value {
                 has_rerolled = true;
                 x = roll_dice(1, sides, rng)[0]
             }
@@ -169,7 +169,7 @@ fn compute_i_reroll<RNG: Rng>(
 fn compute_option<RNG: Rng>(
     rolls: &mut SingleRollResult,
     sides: u64,
-    res: Vec<u64>,
+    res: Vec<DiceResult>,
     option: Pair<Rule>,
     rng: &mut RNG,
 ) -> Result<OptionResult> {
@@ -339,8 +339,10 @@ pub(crate) fn find_first_dice(expr: &mut Pairs<Rule>) -> Option<String> {
     None
 }
 
-pub(crate) fn roll_dice<RNG: Rng>(num: u64, sides: u64, rng: &mut RNG) -> Vec<u64> {
-    (0..num).map(|_| rng.gen_range(1, sides + 1)).collect()
+pub(crate) fn roll_dice<RNG: Rng>(num: u64, sides: u64, rng: &mut RNG) -> Vec<DiceResult> {
+    (0..num)
+        .map(|_| DiceResult::new(rng.gen_range(1, sides + 1), sides))
+        .collect()
 }
 
 fn extract_option_value(option: Pair<Rule>) -> Option<u64> {
