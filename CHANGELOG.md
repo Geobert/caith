@@ -1,3 +1,6 @@
+# 2.2.1
+- FIX: issue #2
+
 # 2.2.0
 - NEW: added `Critic` to mark a dice roll as critic
 

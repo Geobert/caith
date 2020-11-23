@@ -199,16 +199,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn sandbox_test() {
-        let r = Roller::new("2d6 + -4").unwrap();
-        r.dices()
-            .expect("Error while parsing")
-            .for_each(|d| eprintln!("{}", d));
-
-        eprintln!("{}\n{}", r.as_str(), r.roll().unwrap());
-    }
-
-    #[test]
     fn get_repeat_test() {
         let r = Roller::new("(2d6 + 6) ^ 8 : test").unwrap();
         let roll_res = r.roll().unwrap();
@@ -296,5 +286,15 @@ mod tests {
 
         let r = Roller::new("ova(-5)").unwrap();
         eprintln!("{}", r.roll().unwrap());
+    }
+
+    #[test]
+    fn sandbox_test() {
+        let r = Roller::new("10d6 e3 e3 + 4").unwrap();
+        r.dices()
+            .expect("Error while parsing")
+            .for_each(|d| eprintln!("{}", d));
+
+        eprintln!("{}\n{}", r.as_str(), r.roll().unwrap());
     }
 }

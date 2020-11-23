@@ -4,7 +4,7 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use crate::parser::TotalModifier;
+use crate::{error::Result, parser::TotalModifier};
 
 /// Used to mark a dice roll if its result is a critic
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -232,7 +232,7 @@ impl SingleRollResult {
     }
 
     /// Compute the total value according to some modifier
-    pub(crate) fn compute_total(&mut self, modifier: TotalModifier) -> i64 {
+    pub(crate) fn compute_total(&mut self, modifier: TotalModifier) -> Result<i64> {
         if self.dirty {
             self.dirty = false;
             let mut flat = self.history.iter().fold(Vec::new(), |mut acc, h| {
@@ -252,16 +252,28 @@ impl SingleRollResult {
             });
             flat.sort_unstable();
             let flat = flat;
-            // theres's no check on bounds as `compute_total` is called after `compute_option` where
-            // the check is done
+            match modifier {
+                TotalModifier::KeepHi(n)
+                | TotalModifier::KeepLo(n)
+                | TotalModifier::DropHi(n)
+                | TotalModifier::DropLo(n) => {
+                    if n > flat.len() {
+                        return Err("Not enough dice to keep or drop".into());
+                    }
+                }
+                TotalModifier::None(_)
+                | TotalModifier::TargetFailure(_, _)
+                | TotalModifier::Fudge => (),
+            }
+
             let slice = match modifier {
                 TotalModifier::KeepHi(n) => &flat[flat.len() - n..],
                 TotalModifier::KeepLo(n) => &flat[..n],
                 TotalModifier::DropHi(n) => &flat[..flat.len() - n],
                 TotalModifier::DropLo(n) => &flat[n..],
-                TotalModifier::None | TotalModifier::TargetFailure(_, _) | TotalModifier::Fudge => {
-                    flat.as_slice()
-                }
+                TotalModifier::None(_)
+                | TotalModifier::TargetFailure(_, _)
+                | TotalModifier::Fudge => flat.as_slice(),
             };
 
             self.total = match modifier {
@@ -288,7 +300,7 @@ impl SingleRollResult {
             };
         }
 
-        self.total
+        Ok(self.total)
     }
 
     /// Get the result value
