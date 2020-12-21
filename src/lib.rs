@@ -20,7 +20,7 @@ pub use rollresult::*;
 
 const REASON_CHAR: char = ':';
 
-/// An object holding the query
+/// An object holding the query.
 ///
 /// It has no advantage compare to free function that would take `&str` as parameter (like previous
 /// version) but it provides a stable API for the day `pest` can have a `Send` type as the parse
@@ -178,9 +178,9 @@ impl Roller {
     }
 }
 
-/// Iterator that lazily returns each dice of the expression
+/// Iterator that lazily returns each dice of the expression.
 ///
-/// See `Roller::dices()` for example
+/// See [`Roller::dices()`] for example
 ///
 pub struct Dices<'a> {
     pairs: Pairs<'a, Rule>,

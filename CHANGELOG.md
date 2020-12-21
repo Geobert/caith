@@ -1,3 +1,8 @@
+# 3.0.0
+- NEW & BREAKING: can use float constant. Ex: `D6 * 1.5`. This small addition change the
+  `RollResult` structure a little bit, as `RollHistory::Value` variant now holds a
+  `Value` instead of `i64`. Hence the major version bump.
+
 # 2.2.1
 - FIX: issue #2
 

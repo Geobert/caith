@@ -69,7 +69,10 @@ These examples are directly taken from DiceMaiden's Readme:
 
 `2d6 + 3d10` : Roll two six-sided dice and three ten-sided dice.
 
-`3d6 + 5` : Roll three six-sided dice and add five. Other supported static modifiers are add (+), subtract (-), multiply (*), and divide (/).
+`3d6 + 5` : Roll three six-sided dice and add five. Other supported static modifiers are
+add (+), subtract (-), multiply (*), and divide (/).
+
+`3d6 * 1.5` : Roll three six-sided dice and add 50%. 
 
 `3d6 e6` : Roll three six-sided dice and explode on sixes. Some game systems call this 'open ended' dice. If the number rolled is greater than or equal to the value given for this option, the die is rolled again and added to the total. If no number is given for this option, it is assumed to be the same as the number of sides on the die. Thus, '3d6 e' is the same as '3d6 e6'. The dice will only explode once with this command. Use `ie` for indefinite explosions.
 

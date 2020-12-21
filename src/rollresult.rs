@@ -6,7 +6,7 @@ use std::{
 
 use crate::{error::Result, parser::TotalModifier};
 
-/// Used to mark a dice roll if its result is a critic
+/// Used to mark a dice roll if its result is a critic.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Critic {
     /// Normal result
@@ -17,7 +17,7 @@ pub enum Critic {
     Max,
 }
 
-/// Carry one dice result, and a marker field to say if it the result is a min, max, or none
+/// Carry one dice result and a marker field to say if it the result is a min, max, or none.
 #[derive(Debug, Clone, Copy, Hash)]
 pub struct DiceResult {
     /// The side of the dice that was rolled
@@ -27,7 +27,10 @@ pub struct DiceResult {
 }
 
 impl DiceResult {
-    /// Create a `DiceResult`
+    /// Create a `DiceResult`.
+    ///
+    /// - `value`: value rolled on the dice
+    /// - `sides`: number of sides of the dice
     pub fn new(value: u64, sides: u64) -> Self {
         DiceResult {
             res: value,
@@ -70,7 +73,7 @@ impl Deref for DiceResult {
     }
 }
 
-/// Carry a constant, either an `i64` or a `f64`
+/// Carry a constant, either an `i64` or a `f64`.
 #[derive(Debug, Clone)]
 pub enum Value {
     /// Integer variant
@@ -80,7 +83,7 @@ pub enum Value {
 }
 
 impl Value {
-    /// Get the value as `i64`
+    /// Get the value as `i64`.
     pub fn get_value(&self) -> i64 {
         match *self {
             Value::Int(i) => i,
@@ -88,7 +91,7 @@ impl Value {
         }
     }
 
-    /// Get the string representation of the value
+    /// Get the string representation of the value.
     pub fn to_string(&self) -> String {
         match *self {
             Value::Int(i) => i.to_string(),
@@ -97,9 +100,11 @@ impl Value {
     }
 }
 
-/// In a `RollResult` history, we either have a vector of the roll, or a separator between different
-/// dices. Ex: `1d6 + 1d6`, we will have a [`RollHistory::Roll`] followed by [`RollHistory::Separator`] and
-/// another [`RollHistory::Roll`]
+/// Carry one step of the history that led to the result.
+///
+/// In a [`RollResult`]'s history, we either have a vector of the roll, or a separator between
+/// different dices. Ex: for `1d6 + 1d6`, we will have a [`RollHistory::Roll`] followed by
+/// [`RollHistory::Separator`] and another [`RollHistory::Roll`].
 #[derive(Debug, Clone)]
 pub enum RollHistory {
     /// A roll with normal dices
@@ -112,7 +117,7 @@ pub enum RollHistory {
     Separator(&'static str),
 }
 
-/// Distinguish between a simple roll and a repeated roll using `^`
+/// Distinguish between a simple roll and a repeated roll using `^`.
 #[derive(Debug, Clone)]
 pub enum RollResultType {
     /// A single roll
@@ -121,6 +126,8 @@ pub enum RollResultType {
     Repeated(RepeatedRollResult),
 }
 
+/// Carry the result of the roll.
+///
 /// A `RollResult` contains either a single roll result, or if the roll is repeated, a list of the
 /// same roll different results. And a reason if needed.
 #[derive(Debug, Clone)]
@@ -130,7 +137,7 @@ pub struct RollResult {
 }
 
 impl RollResult {
-    /// Create a `RollResult` with only one single roll
+    /// Create a `RollResult` with only one single roll.
     pub fn new_single(r: SingleRollResult) -> Self {
         RollResult {
             result: RollResultType::Single(r),
@@ -138,7 +145,7 @@ impl RollResult {
         }
     }
 
-    /// Create a `RollResult` with a repeated roll results
+    /// Create a `RollResult` with a repeated roll results.
     pub fn new_repeated(v: Vec<SingleRollResult>, total: Option<i64>) -> Self {
         RollResult {
             result: RollResultType::Repeated(RepeatedRollResult { rolls: v, total }),
@@ -146,22 +153,22 @@ impl RollResult {
         }
     }
 
-    /// Add a comment to the result
+    /// Add a comment to the result.
     pub fn add_reason(&mut self, reason: String) {
         self.reason = Some(reason);
     }
 
-    /// Get the comment, if any
+    /// Get the comment, if any.
     pub fn get_reason(&self) -> Option<&String> {
         self.reason.as_ref()
     }
 
-    /// Return the result
+    /// Return the result.
     pub fn get_result(&self) -> &RollResultType {
         &self.result
     }
 
-    /// If the result is a single roll, it will return it
+    /// If the result is a single roll, it will return it.
     pub fn as_single(&self) -> Option<&SingleRollResult> {
         match &self.result {
             RollResultType::Single(result) => Some(result),
@@ -169,7 +176,7 @@ impl RollResult {
         }
     }
 
-    /// If the result is a repeated roll, it will return it
+    /// If the result is a repeated roll, it will return it.
     pub fn as_repeated(&self) -> Option<&RepeatedRollResult> {
         match &self.result {
             RollResultType::Single(_) => None,
@@ -178,8 +185,10 @@ impl RollResult {
     }
 }
 
-/// Represent a repeated roll. Can store the sum of all the roll if asked to.
-/// Usually created through `RollResult::new_repeated()` function.
+/// Represent a repeated roll.
+///
+/// Can store the sum of all the roll if asked to. Usually created through
+/// [`RollResult::new_repeated()`] function.
 #[derive(Debug, Clone)]
 pub struct RepeatedRollResult {
     rolls: Vec<SingleRollResult>,
@@ -201,8 +210,9 @@ impl RepeatedRollResult {
     }
 }
 
-/// Carry the result of one roll and an history of the steps taken
-/// Usually created through `RollResult::new_single()` function.
+/// Carry the result of one roll and an history of the steps taken.
+///
+/// Usually created through [`RollResult::new_single()`] function.
 #[derive(Debug, Clone)]
 pub struct SingleRollResult {
     /// Result of the roll. In the case of option `t` and/or `f` used, it's the number of `success -
