@@ -29,7 +29,7 @@ repeated_expr = { "(" ~ expr ~ ")" ~ "^" ~ (add | sort)? ~ number }
 
 expr = { leaf ~ (op ~ leaf)* }
 leaf = _{ dice |  float | number | "(" ~ expr ~ ")" }
-ova = { "ova" ~ "(" ~ number ~")" }
+ova = { "ova" ~ "(" ~ integer ~")" }
 integer = { ("+" | "-")? ~ number }
 reason = { ":" ~ ANY* }
 sort = { "#" }
