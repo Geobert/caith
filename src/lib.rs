@@ -289,8 +289,20 @@ mod tests {
     }
 
     #[test]
+    fn one_value_test() {
+        let r = Roller::new("20").unwrap();
+        let res = r.roll().unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(20, res.get_total());
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
     fn sandbox_test() {
-        let r = Roller::new("20 * 1.5").unwrap();
+        let r = Roller::new("20").unwrap();
         r.dices()
             .expect("Error while parsing")
             .for_each(|d| eprintln!("{}", d));

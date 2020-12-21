@@ -1,4 +1,4 @@
-# 3.0.1
+# 3.0.1 and 3.0.2
 - FIX: Bad total if expression contain only one number.
 
 # 3.0.0

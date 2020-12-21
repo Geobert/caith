@@ -249,7 +249,7 @@ impl SingleRollResult {
     /// Create a `SingleRollResult` with already a total. Used to carry float constant value.
     pub(crate) fn with_float(f: f64) -> Self {
         Self {
-            total: 0,
+            total: f as i64,
             history: vec![RollHistory::Value(Value::Float(f))],
             dirty: false,
             constant: Some(f),
