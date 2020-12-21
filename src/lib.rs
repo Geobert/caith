@@ -106,7 +106,7 @@ impl Roller {
                 });
             let mut results = results?;
             if sort {
-                results.sort_unstable_by(|a, b| a.get_total().cmp(&b.get_total()));
+                results.sort_unstable_by(|a, b| a.get_total().partial_cmp(&b.get_total()).unwrap());
             }
             let total = if sum_all {
                 Some(
@@ -290,7 +290,7 @@ mod tests {
 
     #[test]
     fn sandbox_test() {
-        let r = Roller::new("10d6 e3 e3 + 4").unwrap();
+        let r = Roller::new("1d6 * 1.5").unwrap();
         r.dices()
             .expect("Error while parsing")
             .for_each(|d| eprintln!("{}", d));

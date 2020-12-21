@@ -70,6 +70,33 @@ impl Deref for DiceResult {
     }
 }
 
+/// Carry a constant, either an `i64` or a `f64`
+#[derive(Debug, Clone)]
+pub enum Value {
+    /// Integer variant
+    Int(i64),
+    /// Float variant
+    Float(f64),
+}
+
+impl Value {
+    /// Get the value as `i64`
+    pub fn get_value(&self) -> i64 {
+        match *self {
+            Value::Int(i) => i,
+            Value::Float(f) => f as i64,
+        }
+    }
+
+    /// Get the string representation of the value
+    pub fn to_string(&self) -> String {
+        match *self {
+            Value::Int(i) => i.to_string(),
+            Value::Float(f) => f.to_string(),
+        }
+    }
+}
+
 /// In a `RollResult` history, we either have a vector of the roll, or a separator between different
 /// dices. Ex: `1d6 + 1d6`, we will have a [`RollHistory::Roll`] followed by [`RollHistory::Separator`] and
 /// another [`RollHistory::Roll`]
@@ -80,7 +107,7 @@ pub enum RollHistory {
     /// A roll with Fudge dices
     Fudge(Vec<u64>),
     /// Was not a roll, but just a value
-    Value(i64),
+    Value(Value),
     /// An operation between roll and/or value
     Separator(&'static str),
 }
@@ -185,6 +212,7 @@ pub struct SingleRollResult {
     history: Vec<RollHistory>,
     /// Internal usage field to avoid computing a total if it's already done.
     dirty: bool,
+    constant: Option<f64>,
 }
 
 impl SingleRollResult {
@@ -194,6 +222,7 @@ impl SingleRollResult {
             total: 0,
             history: Vec::new(),
             dirty: true,
+            constant: None,
         }
     }
 
@@ -201,8 +230,19 @@ impl SingleRollResult {
     pub(crate) fn with_total(total: i64) -> Self {
         Self {
             total,
-            history: vec![RollHistory::Value(total)],
+            history: vec![RollHistory::Value(Value::Int(total))],
             dirty: false,
+            constant: None,
+        }
+    }
+
+    /// Create a `SingleRollResult` with already a total. Used to carry float constant value.
+    pub(crate) fn with_float(f: f64) -> Self {
+        Self {
+            total: 0,
+            history: vec![RollHistory::Value(Value::Float(f))],
+            dirty: false,
+            constant: Some(f),
         }
     }
 
@@ -212,6 +252,7 @@ impl SingleRollResult {
             total: total as i64,
             history: vec![RollHistory::Roll(history)],
             dirty: false,
+            constant: None,
         }
     }
 
@@ -245,7 +286,7 @@ impl SingleRollResult {
                         let mut c = r.iter().map(|u| *u as i64).collect();
                         acc.append(&mut c);
                     }
-                    RollHistory::Value(v) => acc.push(*v),
+                    RollHistory::Value(v) => acc.push(v.get_value()),
                     RollHistory::Separator(_) => (),
                 };
                 acc
@@ -306,6 +347,17 @@ impl SingleRollResult {
     /// Get the result value
     pub fn get_total(&self) -> i64 {
         self.total
+    }
+
+    /// Says if the used value for math operation is 0
+    ///
+    /// If there's a constant stored, we'll use it and if not, `total` is used instead
+    pub fn is_zero(&self) -> bool {
+        if let Some(c) = self.constant {
+            c == 0.0
+        } else {
+            self.total == 0
+        }
     }
 
     /// Turn the vector of `RollHistory` to a `String`
@@ -386,10 +438,17 @@ impl Add for SingleRollResult {
 
     fn add(mut self, mut rhs: Self) -> Self::Output {
         merge_history(&mut self, &mut rhs, " + ");
+        let total = match (self.constant, rhs.constant) {
+            (None, None) => self.total + rhs.total,
+            (None, Some(constant)) => (self.total as f64 + constant).trunc() as i64,
+            (Some(constant), None) => (constant + rhs.total as f64).trunc() as i64,
+            (Some(lconstant), Some(rconstant)) => (lconstant + rconstant).trunc() as i64,
+        };
         SingleRollResult {
-            total: self.total + rhs.total,
+            total,
             history: self.history,
             dirty: false,
+            constant: None,
         }
     }
 }
@@ -399,10 +458,17 @@ impl Sub for SingleRollResult {
 
     fn sub(mut self, mut rhs: Self) -> Self::Output {
         merge_history(&mut self, &mut rhs, " - ");
+        let total = match (self.constant, rhs.constant) {
+            (None, None) => self.total - rhs.total,
+            (None, Some(constant)) => (self.total as f64 - constant).trunc() as i64,
+            (Some(constant), None) => (constant - rhs.total as f64).trunc() as i64,
+            (Some(lconstant), Some(rconstant)) => (lconstant - rconstant).trunc() as i64,
+        };
         SingleRollResult {
-            total: self.total - rhs.total,
+            total,
             history: self.history,
             dirty: false,
+            constant: None,
         }
     }
 }
@@ -412,10 +478,17 @@ impl Mul for SingleRollResult {
 
     fn mul(mut self, mut rhs: Self) -> Self::Output {
         merge_history(&mut self, &mut rhs, " * ");
+        let total = match (self.constant, rhs.constant) {
+            (None, None) => self.total * rhs.total,
+            (None, Some(constant)) => (self.total as f64 * constant).trunc() as i64,
+            (Some(constant), None) => (constant * rhs.total as f64).trunc() as i64,
+            (Some(lconstant), Some(rconstant)) => (lconstant * rconstant).trunc() as i64,
+        };
         SingleRollResult {
-            total: self.total * rhs.total,
+            total,
             history: self.history,
             dirty: false,
+            constant: None,
         }
     }
 }
@@ -425,10 +498,17 @@ impl Div for SingleRollResult {
 
     fn div(mut self, mut rhs: Self) -> Self::Output {
         merge_history(&mut self, &mut rhs, " / ");
+        let total = match (self.constant, rhs.constant) {
+            (None, None) => self.total / rhs.total,
+            (None, Some(constant)) => (self.total as f64 / constant).trunc() as i64,
+            (Some(constant), None) => (constant / rhs.total as f64).trunc() as i64,
+            (Some(lconstant), Some(rconstant)) => (lconstant / rconstant).trunc() as i64,
+        };
         SingleRollResult {
-            total: self.total / rhs.total,
+            total,
             history: self.history,
             dirty: false,
+            constant: None,
         }
     }
 }

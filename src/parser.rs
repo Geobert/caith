@@ -324,6 +324,9 @@ pub(crate) fn compute<RNG: Rng>(expr: Pairs<Rule>, rng: &mut RNG) -> Result<Sing
             Rule::integer => Ok(SingleRollResult::with_total(
                 pair.as_str().parse::<i64>().unwrap(),
             )),
+            Rule::float => Ok(SingleRollResult::with_float(
+                pair.as_str().parse::<f64>().unwrap(),
+            )),
             Rule::expr => compute(pair.into_inner(), rng),
             Rule::dice => compute_roll(pair.into_inner(), rng),
             _ => unreachable!("{:#?}", pair),
@@ -336,10 +339,10 @@ pub(crate) fn compute<RNG: Rng>(expr: Pairs<Rule>, rng: &mut RNG) -> Result<Sing
                 Rule::sub => Ok(lhs - rhs),
                 Rule::mul => Ok(lhs * rhs),
                 Rule::div => {
-                    if rhs.get_total() != 0 {
-                        Ok(lhs / rhs)
-                    } else {
+                    if rhs.is_zero() {
                         Err("Can't divide by zero".into())
+                    } else {
+                        Ok(lhs / rhs)
                     }
                 }
                 _ => unreachable!(),
