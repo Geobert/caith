@@ -280,7 +280,7 @@ fn compute_roll<RNG: Rng>(mut dice: Pairs<Rule>, rng: &mut RNG) -> Result<Single
     let mut res = roll_dice(nb, sides, rng);
     let mut modifier = TotalModifier::None(Rule::expr);
     let mut next_option = dice.next();
-    if !is_fudge && next_option.is_some() {
+    if !is_fudge {
         while next_option.is_some() {
             let option = next_option.unwrap();
             let opt_res = compute_option(&mut rolls, sides, res, option, rng, &modifier)?;
@@ -321,7 +321,7 @@ pub(crate) fn compute<RNG: Rng>(expr: Pairs<Rule>, rng: &mut RNG) -> Result<Sing
     get_climber().climb(
         expr,
         |pair: Pair<Rule>| match pair.as_rule() {
-            Rule::integer => Ok(SingleRollResult::with_total(
+            Rule::number => Ok(SingleRollResult::with_total(
                 pair.as_str().parse::<i64>().unwrap(),
             )),
             Rule::float => Ok(SingleRollResult::with_float(

@@ -1,3 +1,6 @@
+# 3.0.1
+- FIX: Bad total if expression contain only one number.
+
 # 3.0.0
 - NEW & BREAKING: can use float constant. Ex: `D6 * 1.5`. This small addition change the
   `RollResult` structure a little bit, as `RollHistory::Value` variant now holds a
