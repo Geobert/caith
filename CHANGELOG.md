@@ -1,5 +1,8 @@
+# 3.0.3
+- FIX: Total was 0 if expression contain only one dice.
+
 # 3.0.1 and 3.0.2
-- FIX: Bad total if expression contain only one number.
+- FIX: Total was 0 if expression contain only one number.
 
 # 3.0.0
 - NEW & BREAKING: can use float constant. Ex: `D6 * 1.5`. This small addition change the

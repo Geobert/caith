@@ -281,27 +281,31 @@ fn compute_roll<RNG: Rng>(mut dice: Pairs<Rule>, rng: &mut RNG) -> Result<Single
     let mut modifier = TotalModifier::None(Rule::expr);
     let mut next_option = dice.next();
     if !is_fudge {
-        while next_option.is_some() {
-            let option = next_option.unwrap();
-            let opt_res = compute_option(&mut rolls, sides, res, option, rng, &modifier)?;
-            res = opt_res.res;
-            modifier = match opt_res.modifier {
-                TotalModifier::TargetFailure(t, f) => match modifier {
-                    TotalModifier::TargetFailure(ot, of) => {
-                        if t > 0 {
-                            TotalModifier::TargetFailure(t, of)
-                        } else {
-                            TotalModifier::TargetFailure(ot, f)
+        if next_option.is_some() {
+            while next_option.is_some() {
+                let option = next_option.unwrap();
+                let opt_res = compute_option(&mut rolls, sides, res, option, rng, &modifier)?;
+                res = opt_res.res;
+                modifier = match opt_res.modifier {
+                    TotalModifier::TargetFailure(t, f) => match modifier {
+                        TotalModifier::TargetFailure(ot, of) => {
+                            if t > 0 {
+                                TotalModifier::TargetFailure(t, of)
+                            } else {
+                                TotalModifier::TargetFailure(ot, f)
+                            }
                         }
-                    }
-                    _ => {
-                        rolls.add_history(res.clone(), false);
-                        opt_res.modifier
-                    }
-                },
-                _ => opt_res.modifier,
-            };
-            next_option = dice.next();
+                        _ => {
+                            rolls.add_history(res.clone(), is_fudge);
+                            opt_res.modifier
+                        }
+                    },
+                    _ => opt_res.modifier,
+                };
+                next_option = dice.next();
+            }
+        } else {
+            rolls.add_history(res, is_fudge);
         }
         rolls.compute_total(modifier)?;
     } else {

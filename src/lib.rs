@@ -301,8 +301,44 @@ mod tests {
     }
 
     #[test]
+    fn one_dice_test() {
+        let r = Roller::new("d20").unwrap();
+        let res = r.roll().unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert!(res.get_total() >= 1 && res.get_total() <= 20);
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn float_mul_test() {
+        let r = Roller::new("20 * 1.5").unwrap();
+        let res = r.roll().unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(30, res.get_total());
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn float_add_test() {
+        let r = Roller::new("20 + 1.5").unwrap();
+        let res = r.roll().unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(21, res.get_total());
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
     fn sandbox_test() {
-        let r = Roller::new("20").unwrap();
+        let r = Roller::new("20 * 1.5").unwrap();
         r.dices()
             .expect("Error while parsing")
             .for_each(|d| eprintln!("{}", d));
