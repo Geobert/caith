@@ -42,7 +42,8 @@ r#  : Reroll if <= value
 ir# : Indefinite reroll if <= value
 
 Target:
-t# : minimum value to count as success
+t#  : minimum value to count as success
+tt# : minimum value to count as two successes
 
 Failure:
 f# : value under which it's counted as failure

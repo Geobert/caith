@@ -313,7 +313,7 @@ impl SingleRollResult {
                     }
                 }
                 TotalModifier::None(_)
-                | TotalModifier::TargetFailure(_, _)
+                | TotalModifier::TargetFailureDouble(_, _, _)
                 | TotalModifier::Fudge => (),
             }
 
@@ -323,16 +323,18 @@ impl SingleRollResult {
                 TotalModifier::DropHi(n) => &flat[..flat.len() - n],
                 TotalModifier::DropLo(n) => &flat[n..],
                 TotalModifier::None(_)
-                | TotalModifier::TargetFailure(_, _)
+                | TotalModifier::TargetFailureDouble(_, _, _)
                 | TotalModifier::Fudge => flat.as_slice(),
             };
 
             self.total = match modifier {
-                TotalModifier::TargetFailure(t, f) => slice.iter().fold(0, |acc, x| {
+                TotalModifier::TargetFailureDouble(t, f, d) => slice.iter().fold(0, |acc, x| {
                     let x = *x as u64;
-                    if x >= t {
+                    if d > 0 && x >= d {
+                        acc + 2
+                    } else if t > 0 && x >= t {
                         acc + 1
-                    } else if x <= f {
+                    } else if f > 0 && x <= f {
                         acc - 1
                     } else {
                         acc

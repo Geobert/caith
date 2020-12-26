@@ -5,9 +5,12 @@ use pest::{
     prec_climber::{Assoc, Operator, PrecClimber},
 };
 use pest_derive::Parser;
-use rand::Rng;
 
 use crate::{error::Result, DiceResult, SingleRollResult};
+
+pub trait DiceRollSource {
+    fn roll_single_die(&mut self, sides: u64) -> u64;
+}
 
 #[derive(Parser)]
 #[grammar = "caith.pest"]
@@ -20,7 +23,7 @@ pub(crate) enum TotalModifier {
     KeepLo(usize),
     DropHi(usize),
     DropLo(usize),
-    TargetFailure(u64, u64),
+    TargetFailureDouble(u64, u64, u64),
     Fudge,
     None(Rule),
 }
@@ -73,7 +76,7 @@ fn get_climber() -> Climber {
     }
 }
 
-fn compute_explode<RNG: Rng>(
+fn compute_explode<RNG: DiceRollSource>(
     rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<DiceResult>,
@@ -98,7 +101,7 @@ fn compute_explode<RNG: Rng>(
     (TotalModifier::None(Rule::explode), res)
 }
 
-fn compute_i_explode<RNG: Rng>(
+fn compute_i_explode<RNG: DiceRollSource>(
     rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<DiceResult>,
@@ -122,7 +125,7 @@ fn compute_i_explode<RNG: Rng>(
     (TotalModifier::None(Rule::i_explode), res)
 }
 
-fn compute_reroll<RNG: Rng>(
+fn compute_reroll<RNG: DiceRollSource>(
     rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<DiceResult>,
@@ -149,7 +152,7 @@ fn compute_reroll<RNG: Rng>(
     (TotalModifier::None(Rule::reroll), res)
 }
 
-fn compute_i_reroll<RNG: Rng>(
+fn compute_i_reroll<RNG: DiceRollSource>(
     rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<DiceResult>,
@@ -176,7 +179,7 @@ fn compute_i_reroll<RNG: Rng>(
     (TotalModifier::None(Rule::i_reroll), res)
 }
 
-fn compute_option<RNG: Rng>(
+fn compute_option<RNG: DiceRollSource>(
     rolls: &mut SingleRollResult,
     sides: u64,
     res: Vec<DiceResult>,
@@ -219,11 +222,15 @@ fn compute_option<RNG: Rng>(
         }
         Rule::target => {
             let value = extract_option_value(option).unwrap();
-            (TotalModifier::TargetFailure(value, 0), res)
+            (TotalModifier::TargetFailureDouble(value, 0, 0), res)
+        }
+        Rule::double_target => {
+            let value = extract_option_value(option).unwrap();
+            (TotalModifier::TargetFailureDouble(0, 0, value), res)
         }
         Rule::failure => {
             let value = extract_option_value(option).unwrap();
-            (TotalModifier::TargetFailure(0, value), res)
+            (TotalModifier::TargetFailureDouble(0, value, 0), res)
         }
         _ => unreachable!("{:#?}", option),
     };
@@ -243,7 +250,7 @@ fn compute_option<RNG: Rng>(
                 n
             }
         }
-        TotalModifier::None(_) | TotalModifier::TargetFailure(_, _) | TotalModifier::Fudge => 0,
+        TotalModifier::None(_) | TotalModifier::TargetFailureDouble(_, _, _) | TotalModifier::Fudge => 0,
     };
     res.sort_unstable();
     let res = match modifier {
@@ -251,12 +258,12 @@ fn compute_option<RNG: Rng>(
         TotalModifier::KeepLo(_) => res[..n].to_vec(),
         TotalModifier::DropHi(_) => res[..res.len() - n].to_vec(),
         TotalModifier::DropLo(_) => res[n..].to_vec(),
-        TotalModifier::None(_) | TotalModifier::TargetFailure(_, _) | TotalModifier::Fudge => res,
+        TotalModifier::None(_) | TotalModifier::TargetFailureDouble(_, _, _) | TotalModifier::Fudge => res,
     };
     Ok(OptionResult { res, modifier })
 }
 
-fn compute_roll<RNG: Rng>(mut dice: Pairs<Rule>, rng: &mut RNG) -> Result<SingleRollResult> {
+fn compute_roll<RNG: DiceRollSource>(mut dice: Pairs<Rule>, rng: &mut RNG) -> Result<SingleRollResult> {
     let mut rolls = SingleRollResult::new();
     let maybe_nb = dice.next().unwrap();
     let nb = match maybe_nb.as_rule() {
@@ -287,12 +294,14 @@ fn compute_roll<RNG: Rng>(mut dice: Pairs<Rule>, rng: &mut RNG) -> Result<Single
                 let opt_res = compute_option(&mut rolls, sides, res, option, rng, &modifier)?;
                 res = opt_res.res;
                 modifier = match opt_res.modifier {
-                    TotalModifier::TargetFailure(t, f) => match modifier {
-                        TotalModifier::TargetFailure(ot, of) => {
+                    TotalModifier::TargetFailureDouble(t, f, d) => match modifier {
+                        TotalModifier::TargetFailureDouble(ot, of, od) => {
                             if t > 0 {
-                                TotalModifier::TargetFailure(t, of)
+                                TotalModifier::TargetFailureDouble(t, of, od)
+                            } else if f > 0 {
+                                TotalModifier::TargetFailureDouble(ot, f, od)
                             } else {
-                                TotalModifier::TargetFailure(ot, f)
+                                TotalModifier::TargetFailureDouble(ot, of, d)
                             }
                         }
                         _ => {
@@ -321,7 +330,7 @@ fn compute_roll<RNG: Rng>(mut dice: Pairs<Rule>, rng: &mut RNG) -> Result<Single
 }
 
 // compute a whole roll expression
-pub(crate) fn compute<RNG: Rng>(expr: Pairs<Rule>, rng: &mut RNG) -> Result<SingleRollResult> {
+pub(crate) fn compute<RNG: DiceRollSource>(expr: Pairs<Rule>, rng: &mut RNG) -> Result<SingleRollResult> {
     get_climber().climb(
         expr,
         |pair: Pair<Rule>| match pair.as_rule() {
@@ -371,9 +380,9 @@ pub(crate) fn find_first_dice(expr: &mut Pairs<Rule>) -> Option<String> {
     None
 }
 
-pub(crate) fn roll_dice<RNG: Rng>(num: u64, sides: u64, rng: &mut RNG) -> Vec<DiceResult> {
+pub(crate) fn roll_dice<RNG: DiceRollSource>(num: u64, sides: u64, rng: &mut RNG) -> Vec<DiceResult> {
     (0..num)
-        .map(|_| DiceResult::new(rng.gen_range(1, sides + 1), sides))
+        .map(|_| DiceResult::new(rng.roll_single_die(sides), sides))
         .collect()
 }
 

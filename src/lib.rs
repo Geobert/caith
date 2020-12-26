@@ -14,7 +14,7 @@ mod parser;
 mod rollresult;
 pub use error::*;
 
-use parser::{RollParser, Rule};
+use parser::{RollParser, Rule, DiceRollSource};
 use rand::Rng;
 pub use rollresult::*;
 
@@ -31,6 +31,16 @@ const REASON_CHAR: char = ':';
 ///
 #[derive(Clone, Debug)]
 pub struct Roller(String);
+
+struct RngDiceRollSource<'a, T> where T: Rng {
+    rng: &'a mut T,
+}
+
+impl<T> DiceRollSource for RngDiceRollSource<'_, T> where T: Rng {
+    fn roll_single_die(&mut self, sides: u64) -> u64 {
+        self.rng.gen_range(1, 1 + sides)
+    }
+}
 
 impl Roller {
     /// Store the input
@@ -51,6 +61,11 @@ impl Roller {
 
     /// Evaluate and roll the dices with provided rng source
     pub fn roll_with<RNG: Rng>(&self, rng: &mut RNG) -> Result<RollResult> {
+        self.roll_with_source(&mut RngDiceRollSource{rng: rng})
+    }
+
+    /// Evaluate and roll the dice with provided dice roll source
+    pub fn roll_with_source<RNG: DiceRollSource>(&self, rng: &mut RNG) -> Result<RollResult> {
         let mut pairs = RollParser::parse(Rule::command, &self.0)?;
         let expr_type = pairs.next().unwrap();
         let mut roll_res = match expr_type.as_rule() {
@@ -77,7 +92,7 @@ impl Roller {
         Ok(roll_res)
     }
 
-    fn process_repeated_expr<RNG: Rng>(expr_type: Pair<Rule>, rng: &mut RNG) -> Result<RollResult> {
+    fn process_repeated_expr<RNG: DiceRollSource>(expr_type: Pair<Rule>, rng: &mut RNG) -> Result<RollResult> {
         let mut pairs = expr_type.into_inner();
         let expr = pairs.next().unwrap();
         let maybe_option = pairs.next().unwrap();
@@ -344,5 +359,95 @@ mod tests {
             .for_each(|d| eprintln!("{}", d));
 
         eprintln!("{}\n{}", r.as_str(), r.roll().unwrap());
+    }
+
+    struct IteratorDiceRollSource<'a, T> where T: Iterator<Item = u64> {
+        iterator: &'a mut T,
+    }
+
+    impl<T> DiceRollSource for IteratorDiceRollSource<'_, T> where T: Iterator<Item = u64> {
+        fn roll_single_die(&mut self, sides: u64) -> u64 {
+            match self.iterator.next() {
+                Some(value) => {
+                    if value > sides {
+                        panic!("Tried to return {} for a {} sided dice", value, sides)
+                    }
+                    println!("Dice {}", value);
+                    value
+                },
+                None => panic!("Iterator out of values")
+            }
+        }
+    }
+
+    #[test]
+    fn counting_roller_test() {
+        let r = Roller::new("3d6").unwrap();
+        let rolls = vec![3, 6, 3];
+        let res = r.roll_with_source(&mut IteratorDiceRollSource{iterator: &mut rolls.into_iter()}).unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(res.get_total(), 12);
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn target_number_test() {
+        let r = Roller::new("10d10 t7").unwrap();
+        let res = r.roll_with_source(&mut IteratorDiceRollSource{iterator: &mut (1..11)}).unwrap();
+        println!("{}", res);
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            // We rolled one of every number, with a target number of 7 we should score a success on the 7, 8, 9, and 10. So four total.
+            assert_eq!(res.get_total(), 4);
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn target_number_double_test() {
+        let r = Roller::new("10d10 t7 tt9").unwrap();
+        let res = r.roll_with_source(&mut IteratorDiceRollSource{iterator: &mut (1..11)}).unwrap();
+        println!("{}", res);
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            // We rolled one of every number. That's a success each for the 7 and 8, and two success each for the 9 and 10. So a toal of six.
+            assert_eq!(res.get_total(), 6);
+        } else {
+            assert!(false);
+        }
+    }
+
+    // Where a user has asked for a doubles threashold that is lower than the single threashold, the single threashold is ignored.
+    #[test]
+    fn target_number_double_lower_than_target_test() {
+        let r = Roller::new("10d10 tt7 t9").unwrap();
+        let res = r.roll_with_source(&mut IteratorDiceRollSource{iterator: &mut (1..11)}).unwrap();
+        println!("{}", res);
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            // We rolled one of every number. That's two successes each for the 7, 8, 9, and 10. So eight total.
+            assert_eq!(res.get_total(), 8);
+        } else {
+            assert!(false);
+        }
+    }
+
+    // Where a user has asked for a doubles without singles.
+    #[test]
+    fn target_number_double_only() {
+        let r = Roller::new("10d10 tt8").unwrap();
+        let res = r.roll_with_source(&mut IteratorDiceRollSource{iterator: &mut (1..11)}).unwrap();
+        println!("{}", res);
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            // We rolled one of every number. That's two successes each for the 8, 9, and 10. So six total.
+            assert_eq!(res.get_total(), 6);
+        } else {
+            assert!(false);
+        }
     }
 }
