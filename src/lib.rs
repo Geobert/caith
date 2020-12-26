@@ -360,4 +360,36 @@ mod tests {
 
         eprintln!("{}\n{}", r.as_str(), r.roll().unwrap());
     }
+
+    struct IteratorDiceRollSource<'a, T> where T: Iterator<Item = u64> {
+        iterator: &'a mut T,
+    }
+
+    impl<T> DiceRollSource for IteratorDiceRollSource<'_, T> where T: Iterator<Item = u64> {
+        fn roll_single_die(&mut self, sides: u64) -> u64 {
+            match self.iterator.next() {
+                Some(value) => {
+                    if value > sides {
+                        panic!("Tried to return {} for a {} sided dice", value, sides)
+                    }
+                    println!("Dice {}", value);
+                    value
+                },
+                None => panic!("Iterator out of values")
+            }
+        }
+    }
+
+    #[test]
+    fn counting_roller_test() {
+        let r = Roller::new("3d6").unwrap();
+        let rolls = vec![3, 6, 3];
+        let res = r.roll_with_source(&mut IteratorDiceRollSource{iterator: &mut rolls.into_iter()}).unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(res.get_total(), 12);
+        } else {
+            assert!(false);
+        }
+    }
 }
