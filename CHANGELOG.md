@@ -1,3 +1,8 @@
+# 3.1.0
+- NEW: double target `tt` option, see [@JamesLaverack's
+  PR](https://github.com/Geobert/caith/pull/3)
+- Enhance tests thanks to this PR.
+
 # 3.0.3
 - FIX: Total was 0 if expression contain only one dice.
 
