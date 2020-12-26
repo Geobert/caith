@@ -14,7 +14,7 @@ mod parser;
 mod rollresult;
 pub use error::*;
 
-use parser::{RollParser, Rule};
+use parser::{RollParser, Rule, DiceRollSource};
 use rand::Rng;
 pub use rollresult::*;
 
@@ -31,6 +31,16 @@ const REASON_CHAR: char = ':';
 ///
 #[derive(Clone, Debug)]
 pub struct Roller(String);
+
+struct RngDiceRollSource<'a, T> where T: Rng {
+    rng: &'a mut T,
+}
+
+impl<T> DiceRollSource for RngDiceRollSource<'_, T> where T: Rng {
+    fn roll_single_die(&mut self, sides: u64) -> u64 {
+        self.rng.gen_range(1, 1 + sides)
+    }
+}
 
 impl Roller {
     /// Store the input
@@ -51,6 +61,11 @@ impl Roller {
 
     /// Evaluate and roll the dices with provided rng source
     pub fn roll_with<RNG: Rng>(&self, rng: &mut RNG) -> Result<RollResult> {
+        self.roll_with_source(&mut RngDiceRollSource{rng: rng})
+    }
+
+    /// Evaluate and roll the dice with provided dice roll source
+    pub fn roll_with_source<RNG: DiceRollSource>(&self, rng: &mut RNG) -> Result<RollResult> {
         let mut pairs = RollParser::parse(Rule::command, &self.0)?;
         let expr_type = pairs.next().unwrap();
         let mut roll_res = match expr_type.as_rule() {
@@ -77,7 +92,7 @@ impl Roller {
         Ok(roll_res)
     }
 
-    fn process_repeated_expr<RNG: Rng>(expr_type: Pair<Rule>, rng: &mut RNG) -> Result<RollResult> {
+    fn process_repeated_expr<RNG: DiceRollSource>(expr_type: Pair<Rule>, rng: &mut RNG) -> Result<RollResult> {
         let mut pairs = expr_type.into_inner();
         let expr = pairs.next().unwrap();
         let maybe_option = pairs.next().unwrap();
