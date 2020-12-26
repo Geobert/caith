@@ -392,4 +392,18 @@ mod tests {
             assert!(false);
         }
     }
+
+    #[test]
+    fn target_number_test() {
+        let r = Roller::new("10d10 t7").unwrap();
+        let res = r.roll_with_source(&mut IteratorDiceRollSource{iterator: &mut (1..11)}).unwrap();
+        println!("{}", res);
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            // We rolled one of every number, with a target number of 7 we should score a success on the 7, 8, 9, and 10. So four total.
+            assert_eq!(res.get_total(), 4);
+        } else {
+            assert!(false);
+        }
+    }
 }
