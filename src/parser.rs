@@ -23,7 +23,7 @@ pub(crate) enum TotalModifier {
     KeepLo(usize),
     DropHi(usize),
     DropLo(usize),
-    TargetFailure(u64, u64),
+    TargetFailureDouble(u64, u64, u64),
     Fudge,
     None(Rule),
 }
@@ -222,11 +222,15 @@ fn compute_option<RNG: DiceRollSource>(
         }
         Rule::target => {
             let value = extract_option_value(option).unwrap();
-            (TotalModifier::TargetFailure(value, 0), res)
+            (TotalModifier::TargetFailureDouble(value, 0, 0), res)
+        }
+        Rule::double_target => {
+            let value = extract_option_value(option).unwrap();
+            (TotalModifier::TargetFailureDouble(0, 0, value), res)
         }
         Rule::failure => {
             let value = extract_option_value(option).unwrap();
-            (TotalModifier::TargetFailure(0, value), res)
+            (TotalModifier::TargetFailureDouble(0, value, 0), res)
         }
         _ => unreachable!("{:#?}", option),
     };
@@ -246,7 +250,7 @@ fn compute_option<RNG: DiceRollSource>(
                 n
             }
         }
-        TotalModifier::None(_) | TotalModifier::TargetFailure(_, _) | TotalModifier::Fudge => 0,
+        TotalModifier::None(_) | TotalModifier::TargetFailureDouble(_, _, _) | TotalModifier::Fudge => 0,
     };
     res.sort_unstable();
     let res = match modifier {
@@ -254,7 +258,7 @@ fn compute_option<RNG: DiceRollSource>(
         TotalModifier::KeepLo(_) => res[..n].to_vec(),
         TotalModifier::DropHi(_) => res[..res.len() - n].to_vec(),
         TotalModifier::DropLo(_) => res[n..].to_vec(),
-        TotalModifier::None(_) | TotalModifier::TargetFailure(_, _) | TotalModifier::Fudge => res,
+        TotalModifier::None(_) | TotalModifier::TargetFailureDouble(_, _, _) | TotalModifier::Fudge => res,
     };
     Ok(OptionResult { res, modifier })
 }
@@ -290,12 +294,14 @@ fn compute_roll<RNG: DiceRollSource>(mut dice: Pairs<Rule>, rng: &mut RNG) -> Re
                 let opt_res = compute_option(&mut rolls, sides, res, option, rng, &modifier)?;
                 res = opt_res.res;
                 modifier = match opt_res.modifier {
-                    TotalModifier::TargetFailure(t, f) => match modifier {
-                        TotalModifier::TargetFailure(ot, of) => {
+                    TotalModifier::TargetFailureDouble(t, f, d) => match modifier {
+                        TotalModifier::TargetFailureDouble(ot, of, od) => {
                             if t > 0 {
-                                TotalModifier::TargetFailure(t, of)
+                                TotalModifier::TargetFailureDouble(t, of, od)
+                            } else if f > 0 {
+                                TotalModifier::TargetFailureDouble(ot, f, od)
                             } else {
-                                TotalModifier::TargetFailure(ot, f)
+                                TotalModifier::TargetFailureDouble(ot, of, d)
                             }
                         }
                         _ => {
