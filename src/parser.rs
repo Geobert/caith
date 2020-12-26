@@ -250,7 +250,9 @@ fn compute_option<RNG: DiceRollSource>(
                 n
             }
         }
-        TotalModifier::None(_) | TotalModifier::TargetFailureDouble(_, _, _) | TotalModifier::Fudge => 0,
+        TotalModifier::None(_)
+        | TotalModifier::TargetFailureDouble(_, _, _)
+        | TotalModifier::Fudge => 0,
     };
     res.sort_unstable();
     let res = match modifier {
@@ -258,12 +260,17 @@ fn compute_option<RNG: DiceRollSource>(
         TotalModifier::KeepLo(_) => res[..n].to_vec(),
         TotalModifier::DropHi(_) => res[..res.len() - n].to_vec(),
         TotalModifier::DropLo(_) => res[n..].to_vec(),
-        TotalModifier::None(_) | TotalModifier::TargetFailureDouble(_, _, _) | TotalModifier::Fudge => res,
+        TotalModifier::None(_)
+        | TotalModifier::TargetFailureDouble(_, _, _)
+        | TotalModifier::Fudge => res,
     };
     Ok(OptionResult { res, modifier })
 }
 
-fn compute_roll<RNG: DiceRollSource>(mut dice: Pairs<Rule>, rng: &mut RNG) -> Result<SingleRollResult> {
+fn compute_roll<RNG: DiceRollSource>(
+    mut dice: Pairs<Rule>,
+    rng: &mut RNG,
+) -> Result<SingleRollResult> {
     let mut rolls = SingleRollResult::new();
     let maybe_nb = dice.next().unwrap();
     let nb = match maybe_nb.as_rule() {
@@ -330,7 +337,10 @@ fn compute_roll<RNG: DiceRollSource>(mut dice: Pairs<Rule>, rng: &mut RNG) -> Re
 }
 
 // compute a whole roll expression
-pub(crate) fn compute<RNG: DiceRollSource>(expr: Pairs<Rule>, rng: &mut RNG) -> Result<SingleRollResult> {
+pub(crate) fn compute<RNG: DiceRollSource>(
+    expr: Pairs<Rule>,
+    rng: &mut RNG,
+) -> Result<SingleRollResult> {
     get_climber().climb(
         expr,
         |pair: Pair<Rule>| match pair.as_rule() {
@@ -380,7 +390,11 @@ pub(crate) fn find_first_dice(expr: &mut Pairs<Rule>) -> Option<String> {
     None
 }
 
-pub(crate) fn roll_dice<RNG: DiceRollSource>(num: u64, sides: u64, rng: &mut RNG) -> Vec<DiceResult> {
+pub(crate) fn roll_dice<RNG: DiceRollSource>(
+    num: u64,
+    sides: u64,
+    rng: &mut RNG,
+) -> Vec<DiceResult> {
     (0..num)
         .map(|_| DiceResult::new(rng.roll_single_die(sides), sides))
         .collect()
