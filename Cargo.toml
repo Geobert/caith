@@ -1,6 +1,6 @@
 [package]
 name = "caith"
-version = "3.1.0"
+version = "4.0.0"
 authors = ["Geobert Quach <geobert@protonmail.com>"]
 edition = "2018"
 description = "A dice roller library supporting many features"
@@ -19,3 +19,12 @@ rand = "0.7.3"
 
 [dev-dependencies]
 rand_core = "0.5.1"
+
+[features]
+default = []
+ova = []
+cde = []
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

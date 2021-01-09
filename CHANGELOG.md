@@ -1,3 +1,9 @@
+# 4.0.0
+- BREAKING: remove `ova()` syntax from grammar, I want to avoid cluttering grammar with
+  multiple interpretations of the roll result. I let the user of the crate to detect an
+  OVA roll, and use helpers::compute_ova to get the result. More interpretations to come.
+  Moreover, helpers are not active by default.
+
 # 3.1.0
 - NEW: double target `tt` option, see [@JamesLaverack's
   PR](https://github.com/Geobert/caith/pull/3)

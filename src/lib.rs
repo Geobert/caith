@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(docsrs, deny(broken_intra_doc_links))]
 #![warn(missing_docs)]
 #![warn(broken_intra_doc_links)]
 //! `caith` is a dice roll expression parser and roller.
@@ -9,14 +11,17 @@ use pest::{
     Parser,
 };
 
+pub mod helpers;
+
 mod error;
 mod parser;
 mod rollresult;
+
 pub use error::*;
+pub use rollresult::*;
 
 use parser::{DiceRollSource, RollParser, Rule};
 use rand::Rng;
-pub use rollresult::*;
 
 const REASON_CHAR: char = ':';
 
@@ -67,7 +72,7 @@ impl Roller {
 
     /// Evaluate and roll the dices with provided rng source
     pub fn roll_with<RNG: Rng>(&self, rng: &mut RNG) -> Result<RollResult> {
-        self.roll_with_source(&mut RngDiceRollSource { rng: rng })
+        self.roll_with_source(&mut RngDiceRollSource { rng })
     }
 
     /// Evaluate and roll the dice with provided dice roll source
@@ -77,16 +82,6 @@ impl Roller {
         let mut roll_res = match expr_type.as_rule() {
             Rule::expr => RollResult::new_single(parser::compute(expr_type.into_inner(), rng)?),
             Rule::repeated_expr => Roller::process_repeated_expr(expr_type, rng)?,
-            Rule::ova => {
-                let mut pairs = expr_type.into_inner();
-                let number = pairs.next().unwrap().as_str().parse::<i64>().unwrap();
-                if number == 0 {
-                    return Err("Can't roll 0 dices".into());
-                } else {
-                    let res = parser::roll_dice(number.abs() as u64, 6, rng);
-                    Roller::compute_ova(res, number)
-                }
-            }
             _ => unreachable!(),
         };
 
@@ -145,32 +140,6 @@ impl Roller {
         }
     }
 
-    fn compute_ova(mut res: Vec<DiceResult>, number: i64) -> RollResult {
-        res.sort_unstable();
-        let total = if number > 0 {
-            let mut last_side = 0;
-            let mut current_res = 0;
-            res.iter().fold(0, |acc, current| {
-                if last_side != current.res {
-                    last_side = current.res;
-                    if acc > current_res {
-                        current_res = acc;
-                    }
-                    current.res
-                } else {
-                    acc + current.res
-                }
-            });
-            current_res
-        } else {
-            res.first()
-                .expect("Impossible, that mean we rolled 0 dices")
-                .res
-        };
-
-        RollResult::new_single(SingleRollResult::new_ova(total, res))
-    }
-
     /// Get an iterator on the dices in the expression
     ///
     /// # Examples
@@ -222,11 +191,11 @@ impl<'a> Iterator for Dices<'a> {
 mod tests {
     use super::*;
 
-    struct IteratorDiceRollSource<'a, T>
+    pub(crate) struct IteratorDiceRollSource<'a, T>
     where
         T: Iterator<Item = u64>,
     {
-        iterator: &'a mut T,
+        pub iterator: &'a mut T,
     }
 
     impl<T> DiceRollSource for IteratorDiceRollSource<'_, T>
@@ -348,57 +317,6 @@ mod tests {
         }
         eprintln!();
         eprintln!("{}", roll_res.as_single().unwrap());
-    }
-
-    #[test]
-    fn ova_test() {
-        let res = vec![1, 1, 2, 4, 4, 4, 4, 5, 5, 5, 6]
-            .into_iter()
-            .map(|i| DiceResult::new(i as u64, 6))
-            .collect();
-        assert_eq!(
-            16,
-            Roller::compute_ova(res, 1).as_single().unwrap().get_total()
-        );
-
-        let res = vec![1, 1, 2, 5, 5, 5, 6]
-            .into_iter()
-            .map(|i| DiceResult::new(i as u64, 6))
-            .collect();
-        assert_eq!(
-            1,
-            Roller::compute_ova(res, -1)
-                .as_single()
-                .unwrap()
-                .get_total()
-        );
-
-        let roll_mock = vec![1, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5, 6];
-        let r = Roller::new("ova(12)").unwrap();
-        let roll_res = r
-            .roll_with_source(&mut IteratorDiceRollSource {
-                iterator: &mut roll_mock.into_iter(),
-            })
-            .unwrap();
-        match roll_res.get_result() {
-            rollresult::RollResultType::Single(res) => assert_eq!(15, res.get_total()),
-            rollresult::RollResultType::Repeated(_) => unreachable!(),
-        }
-        eprintln!("{}", roll_res);
-
-        let roll_mock = vec![1, 3, 3, 5, 5];
-        let r = Roller::new("ova(-5)").unwrap();
-        let roll_res = r
-            .roll_with_source(&mut IteratorDiceRollSource {
-                iterator: &mut roll_mock.into_iter(),
-            })
-            .unwrap();
-        match roll_res.get_result() {
-            rollresult::RollResultType::Single(res) => assert_eq!(1, res.get_total()),
-            rollresult::RollResultType::Repeated(_) => unreachable!(),
-        }
-
-        eprintln!("{}", roll_res);
     }
 
     #[test]
@@ -551,8 +469,56 @@ mod tests {
     }
 
     #[test]
+    fn target_enum() {
+        let r = Roller::new("6d6 t[2,4,6]").unwrap();
+        let res = r
+            .roll_with_source(&mut IteratorDiceRollSource {
+                iterator: &mut (1..7),
+            })
+            .unwrap();
+        println!("{}", res);
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            // We rolled one of every number. That's half of them being even
+            assert_eq!(res.get_total(), 3);
+        } else {
+            assert!(false);
+        }
+
+        let mock = vec![1, 2, 2, 4, 6, 3];
+        let res = r
+            .roll_with_source(&mut IteratorDiceRollSource {
+                iterator: &mut mock.into_iter(),
+            })
+            .unwrap();
+        println!("{}", res);
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            // We rolled one of every number. That's half of them being even
+            assert_eq!(res.get_total(), 4);
+        } else {
+            assert!(false);
+        }
+
+        let mock = vec![1, 3, 3, 4, 6, 3];
+        let res = r
+            .roll_with_source(&mut IteratorDiceRollSource {
+                iterator: &mut mock.into_iter(),
+            })
+            .unwrap();
+        println!("{}", res);
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            // We rolled one of every number. That's half of them being even
+            assert_eq!(res.get_total(), 2);
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
     fn sandbox_test() {
-        let r = Roller::new("20 * 1.5").unwrap();
+        let r = Roller::new("5d6 t[2,4,6]").unwrap();
         r.dices()
             .expect("Error while parsing")
             .for_each(|d| eprintln!("{}", d));

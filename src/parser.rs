@@ -17,13 +17,14 @@ pub trait DiceRollSource {
 pub(crate) struct RollParser;
 
 // number represent nb dice to keep/drop
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub(crate) enum TotalModifier {
     KeepHi(usize),
     KeepLo(usize),
     DropHi(usize),
     DropLo(usize),
     TargetFailureDouble(u64, u64, u64),
+    TargetEnum(Vec<u64>),
     Fudge,
     None(Rule),
 }
@@ -221,8 +222,25 @@ fn compute_option<RNG: DiceRollSource>(
             (TotalModifier::DropLo(value as usize), res)
         }
         Rule::target => {
-            let value = extract_option_value(option).unwrap();
-            (TotalModifier::TargetFailureDouble(value, 0, 0), res)
+            let value_or_enum = option.into_inner().next().unwrap();
+            match value_or_enum.as_rule() {
+                Rule::number => (
+                    TotalModifier::TargetFailureDouble(
+                        value_or_enum.as_str().parse::<u64>().unwrap(),
+                        0,
+                        0,
+                    ),
+                    res,
+                ),
+                Rule::target_enum => {
+                    let numbers_list = value_or_enum.into_inner();
+                    let numbers_list: Vec<_> = numbers_list
+                        .map(|p| p.as_str().parse::<u64>().unwrap())
+                        .collect();
+                    (TotalModifier::TargetEnum(numbers_list), res)
+                }
+                _ => unreachable!(),
+            }
         }
         Rule::double_target => {
             let value = extract_option_value(option).unwrap();
@@ -252,6 +270,7 @@ fn compute_option<RNG: DiceRollSource>(
         }
         TotalModifier::None(_)
         | TotalModifier::TargetFailureDouble(_, _, _)
+        | TotalModifier::TargetEnum(_)
         | TotalModifier::Fudge => 0,
     };
     res.sort_unstable();
@@ -262,6 +281,7 @@ fn compute_option<RNG: DiceRollSource>(
         TotalModifier::DropLo(_) => res[n..].to_vec(),
         TotalModifier::None(_)
         | TotalModifier::TargetFailureDouble(_, _, _)
+        | TotalModifier::TargetEnum(_)
         | TotalModifier::Fudge => res,
     };
     Ok(OptionResult { res, modifier })
@@ -316,6 +336,10 @@ fn compute_roll<RNG: DiceRollSource>(
                             opt_res.modifier
                         }
                     },
+                    TotalModifier::TargetEnum(_) => {
+                        rolls.add_history(res.clone(), is_fudge);
+                        opt_res.modifier
+                    }
                     _ => opt_res.modifier,
                 };
                 next_option = dice.next();

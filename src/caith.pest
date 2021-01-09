@@ -22,18 +22,19 @@ keep_hi = { "K" ~ number }
 keep_lo = { "k" ~ number }
 drop_hi = { "D" ~ number }
 drop_lo = { "d" ~ number }
-target =  { "t" ~ number }
+target =  { "t" ~ (number | target_enum) }
 double_target = { "tt" ~ number }
 failure =  { "f" ~ number }
+target_enum = { "[" ~ number_list ~ "]"}
+number_list = _{ number ~ ("," ~ number)* }
 
 repeated_expr = { "(" ~ expr ~ ")" ~ "^" ~ (add | sort)? ~ number }
 
 expr = { leaf ~ (op ~ leaf)* }
 leaf = _{ dice |  float | number | "(" ~ expr ~ ")" }
-ova = { "ova" ~ "(" ~ integer ~")" }
 integer = { ("+" | "-")? ~ number }
 reason = { ":" ~ ANY* }
 sort = { "#" }
-command = _{ SOI ~ (ova | repeated_expr | expr) ~ reason? ~ EOI }
+command = _{ SOI ~ (repeated_expr | expr) ~ reason? ~ EOI }
 
 WHITESPACE = _{ " " | " " }

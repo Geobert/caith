@@ -44,6 +44,7 @@ ir# : Indefinite reroll if <= value
 Target:
 t#  : minimum value to count as success
 tt# : minimum value to count as two successes
+t[<list of numbers>] : enumeration of values considered as success
 
 Failure:
 f# : value under which it's counted as failure
@@ -57,12 +58,16 @@ with the `^+` operator, the roll will be repeated and all the totals summed.
 Sorted repetition:
 with the `^#` operator, the roll will be repeated and sorted by total.
 
-OVA roll:
-positive: `ova(12)` or negative: `ova(-5)`
-
 Reason:
 : : Any text after `:` will be a comment
 ```
+
+# Helpers
+
+Some helpers are provided to interpret the roll result according to specific RPG rules.
+See the helpers documentation for more details.
+
+You'll need to add the feature flag of the helpers that you need.
 
 # Examples
 
@@ -91,6 +96,10 @@ Using lowercase `k` will keep the lowest.
 `6d10 t7` : Roll six ten-sided dice and any that are seven or higher are counted as a success. The dice in the roll are not added together for a total. Any die that meets or exceeds the target number is added to a total of successes.
 
 `5d10 t8 f1` : f# denotes a failure number that each dice must match or be beneath in order to count against successes. These work as a sort of negative success and are totalled together as described above. In the example roll, roll five ten-sided dice and each dice that is 8 or higher is a success and subtract each one. The total may be negative. If the option is given a 0 value, that is the same as not having the option at all thus a normal sum of all dice in the roll is performed instead.
+
+`5d10 t8 tt10` : 8 and 9 are counted as success, 10 are counted twice.
+
+`3d6 t[2,4,6]` : only even result will count as success (handy for games like "Knight").
 
 `4d10 k3` : Roll four ten-sided dice and keep the lowest three dice rolled.
 
