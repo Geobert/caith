@@ -69,6 +69,12 @@ See the helpers documentation for more details.
 
 You'll need to add the feature flag of the helpers that you need.
 
+At the moment, the supported feature flags are:
+- `ova`: helper for "OVA: The Anime Role-Playing Game result"
+- `cde`: helper for "Hong Kong, Les Chroniques de l'étrange"
+
+None is activated by default
+
 # Examples
 
 These examples are directly taken from DiceMaiden's Readme:

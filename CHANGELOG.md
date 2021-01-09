@@ -3,6 +3,8 @@
   multiple interpretations of the roll result. I let the user of the crate to detect an
   OVA roll, and use helpers::compute_ova to get the result. More interpretations to come.
   Moreover, helpers are not active by default.
+- NEW: target accepts enumeration of values to consider success: `3d6 t[2,4,6]` will count
+  even dice as success.
 
 # 3.1.0
 - NEW: double target `tt` option, see [@JamesLaverack's
