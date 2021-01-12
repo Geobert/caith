@@ -12,7 +12,7 @@ use crate::{error::*, RollHistory, RollResult, SingleRollResult};
 /// println!("{}", compute_ova(&res, number).unwrap());
 /// ```
 ///
-pub fn compute_ova(res: &RollResult, number: i64) -> Result<RollResult> {
+pub fn compute_ova(res: &RollResult, number: i32) -> Result<RollResult> {
     if number == 0 {
         return Err("Number can't be zero".into());
     }
