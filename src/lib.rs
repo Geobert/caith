@@ -49,7 +49,7 @@ where
     T: Rng,
 {
     fn roll_single_die(&mut self, sides: u64) -> u64 {
-        self.rng.gen_range(1, 1 + sides)
+        self.rng.gen_range(1..1 + sides)
     }
 }
 
