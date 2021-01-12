@@ -1,4 +1,7 @@
-use std::{convert::From, fmt::Display};
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt::Display,
+};
 
 use crate::{error::*, RollHistory, RollResult};
 
@@ -119,15 +122,17 @@ impl PartialEq for CdeResult {
     }
 }
 
-impl From<&str> for Element {
-    fn from(s: &str) -> Self {
+impl TryFrom<&str> for Element {
+    type Error = &'static str;
+
+    fn try_from(s: &str) -> std::result::Result<Self, Self::Error> {
         match s.to_lowercase().as_str() {
-            "feu" | "fire" => Element::Fire(FIRE),
-            "earth" | "terre" => Element::Earth(EARTH),
-            "metal" | "métal" => Element::Metal(METAL),
-            "eau" | "water" => Element::Water(WATER),
-            "bois" | "wood" => Element::Wood(WOOD),
-            _ => unreachable!(),
+            "feu" | "fire" => Ok(Element::Fire(FIRE)),
+            "earth" | "terre" => Ok(Element::Earth(EARTH)),
+            "metal" | "métal" => Ok(Element::Metal(METAL)),
+            "eau" | "water" => Ok(Element::Water(WATER)),
+            "bois" | "wood" => Ok(Element::Wood(WOOD)),
+            _ => Err("Element must be one of `fire`, `earth`, `metal`, `fire` or `wood"),
         }
     }
 }
@@ -182,7 +187,7 @@ pub fn compute_cde(res: &RollResult, element: &str) -> Result<CdeResult> {
             .ok_or("RollHistory must be a Roll variant")?
             .clone();
 
-        let mapping: Element = element.into();
+        let mapping: Element = element.try_into()?;
         let (mapping, elements) = match mapping {
             Element::Fire(m) => (
                 m,
