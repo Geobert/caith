@@ -18,7 +18,7 @@
 //!
 //! // ...
 //! let result = Roller::new("1d6 : initiative").unwrap().roll().unwrap();
-//! printf("{}", result);
+//! println!("{}", result);
 //! ```
 //!
 //! # Syntax
