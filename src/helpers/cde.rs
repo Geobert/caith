@@ -141,13 +141,14 @@ impl Display for CdeResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            r#"Success ({}): {}
+            r#"{}
+Success ({}): {}
 Lucky dice ({}): {}
 Ill dice ({}): {}
 Loksyu ({}): {} ● Yin / {} ○ Yang
 Tin Ji ({}): {}
-History: {}
 "#,
+            self.history.as_ref().unwrap().to_string(),
             self.elements[0],
             self.success,
             self.elements[1],
@@ -158,8 +159,7 @@ History: {}
             self.loksyu.0,
             self.loksyu.1,
             self.elements[4],
-            self.tin_ji,
-            self.history.as_ref().unwrap().to_string()
+            self.tin_ji
         )
     }
 }

@@ -33,8 +33,8 @@ impl Display for Value {
 
 /// Carry one step of the history that led to the result.
 ///
-/// In a [`RollResult`]'s history, we either have a vector of the roll, or a separator between
-/// different dices. Ex: for `1d6 + 1d6`, we will have a [`RollHistory::Roll`] followed by
+/// In a [`super::RollResult`]'s history, we either have a vector of the roll, or a separator
+/// between different dices. Ex: for `1d6 + 1d6`, we will have a [`RollHistory::Roll`] followed by
 /// [`RollHistory::Separator`] and another [`RollHistory::Roll`].
 #[derive(Debug, Clone)]
 pub enum RollHistory {

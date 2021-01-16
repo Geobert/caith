@@ -5,6 +5,7 @@
   Moreover, helpers are not active by default.
 - NEW: target accepts enumeration of values to consider success: `3d6 t[2,4,6]` will count
   even dice as success.
+- NEW: can make a deck of cards and draw cards from it. Feature gated under `cards`.
 
 # 3.1.0
 - NEW: double target `tt` option, see [@JamesLaverack's

@@ -5,7 +5,7 @@ use crate::{
 
 /// Carry the result of one roll and an history of the steps taken.
 ///
-/// Usually created through [`RollResult::new_single()`] function.
+/// Usually created through [`super::RollResult::new_single()`] function.
 #[derive(Debug, Clone)]
 pub struct SingleRollResult {
     /// Result of the roll. In the case of option `t` and/or `f` used, it's the number of `success -

@@ -5,7 +5,7 @@ use crate::rollresult::SingleRollResult;
 /// Represent a repeated roll.
 ///
 /// Can store the sum of all the roll if asked to. Usually created through
-/// [`RollResult::new_repeated()`] function.
+/// [`super::RollResult::new_repeated()`] function.
 #[derive(Debug, Clone)]
 pub struct RepeatedRollResult {
     pub(crate) rolls: Vec<SingleRollResult>,
