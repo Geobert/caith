@@ -1,3 +1,7 @@
+# 4.1.0
+- For `cde` helpers, if the element was passed in French, the printing of the result will
+  be in French as well
+
 # 4.0.0
 - BREAKING: remove `ova()` syntax from grammar, I want to avoid cluttering grammar with
   multiple interpretations of the roll result. I let the user of the crate to detect an

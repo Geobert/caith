@@ -6,11 +6,11 @@ use std::{
 use crate::{error::*, RollHistory, RollResult};
 
 enum Element {
-    Fire([Outcome; 10]),
-    Earth([Outcome; 10]),
-    Metal([Outcome; 10]),
-    Water([Outcome; 10]),
-    Wood([Outcome; 10]),
+    Fire(([Outcome; 10], [&'static str; 5])),
+    Earth(([Outcome; 10], [&'static str; 5])),
+    Metal(([Outcome; 10], [&'static str; 5])),
+    Water(([Outcome; 10], [&'static str; 5])),
+    Wood(([Outcome; 10], [&'static str; 5])),
 }
 
 enum Side {
@@ -92,6 +92,17 @@ const WOOD: [Outcome; 10] = [
     Outcome::Loksyu(Side::Yin),  // 10
 ];
 
+const FIRE_SUIT_EN: [&'static str; 5] = ["㊋ fire", "㊏ earth", "㊍ wood", "㊎ metal", "㊌ water"];
+const FIRE_SUIT_FR: [&'static str; 5] = ["㊋ feu", "㊏ terre", "㊍ bois", "㊎ métal", "㊌ eau"];
+const EARTH_SUIT_EN: [&'static str; 5] = ["㊏ earth", "㊎ metal", "㊋ fire", "㊌ water", "㊍ wood"];
+const EARTH_SUIT_FR: [&'static str; 5] = ["㊏ terre", "㊎ métal", "㊋ feu", "㊌ eau", "㊍ bois"];
+const METAL_SUIT_EN: [&'static str; 5] = ["㊎ metal", "㊌ water", "㊏ earth", "㊍ wood", "㊋ fire"];
+const METAL_SUIT_FR: [&'static str; 5] = ["㊎ métal", "㊌ eau", "㊏ terre", "㊍ bois", "㊋ feu"];
+const WATER_SUIT_EN: [&'static str; 5] = ["㊌ water", "㊍ wood", "㊎ metal", "㊋ fire", "㊏ earth"];
+const WATER_SUIT_FR: [&'static str; 5] = ["㊌ eau", "㊍ bois", "㊎ métal", "㊋ feu", "㊏ terre"];
+const WOOD_SUIT_EN: [&'static str; 5] = ["㊍ wood", "㊋ fire", "㊌ water", "㊏ earth", "㊎ metal"];
+const WOOD_SUIT_FR: [&'static str; 5] = ["㊍ bois", "㊋ feu", "㊌ eau", "㊏ terre", "㊎ métal"];
+
 #[derive(Debug, Default)]
 /// This struct represent the repartition of the dices according to an element
 pub struct CdeResult {
@@ -109,7 +120,7 @@ pub struct CdeResult {
     /// The history to have all the dice results so you can manually check the distribution
     pub history: Option<RollHistory>, // Option to make derive Default happy
     /// The element names to use when printing
-    pub elements: [String; 5],
+    pub elements: [&'static str; 5],
 }
 
 impl PartialEq for CdeResult {
@@ -127,11 +138,16 @@ impl TryFrom<&str> for Element {
 
     fn try_from(s: &str) -> std::result::Result<Self, Self::Error> {
         match s.to_lowercase().as_str() {
-            "feu" | "fire" => Ok(Element::Fire(FIRE)),
-            "earth" | "terre" => Ok(Element::Earth(EARTH)),
-            "metal" | "métal" => Ok(Element::Metal(METAL)),
-            "eau" | "water" => Ok(Element::Water(WATER)),
-            "bois" | "wood" => Ok(Element::Wood(WOOD)),
+            "fire" => Ok(Element::Fire((FIRE, FIRE_SUIT_EN))),
+            "feu" => Ok(Element::Fire((FIRE, FIRE_SUIT_FR))),
+            "earth" => Ok(Element::Earth((EARTH, EARTH_SUIT_EN))),
+            "terre" => Ok(Element::Earth((EARTH, EARTH_SUIT_FR))),
+            "metal" => Ok(Element::Metal((METAL, METAL_SUIT_EN))),
+            "métal" => Ok(Element::Metal((METAL, METAL_SUIT_FR))),
+            "eau" => Ok(Element::Water((WATER, WATER_SUIT_FR))),
+            "water" => Ok(Element::Water((WATER, WATER_SUIT_EN))),
+            "bois" => Ok(Element::Wood((WOOD, WOOD_SUIT_FR))),
+            "wood" => Ok(Element::Wood((WOOD, WOOD_SUIT_EN))),
             _ => Err("Element must be one of `fire`, `earth`, `metal`, `fire` or `wood"),
         }
     }
@@ -139,20 +155,28 @@ impl TryFrom<&str> for Element {
 
 impl Display for CdeResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let prefixes = if self.elements.contains(&"feu") {
+            ["Succès", "Dé-fastes", "Dé-néfastes"]
+        } else {
+            ["Success", "Lucky dice", "Ill dice"]
+        };
         write!(
             f,
             r#"{}
-Success ({}): {}
-Lucky dice ({}): {}
-Ill dice ({}): {}
+{} ({}): {}
+{} ({}): {}
+{} ({}): {}
 Loksyu ({}): {} ● Yin / {} ○ Yang
 Tin Ji ({}): {}
 "#,
             self.history.as_ref().unwrap().to_string(),
+            prefixes[0],
             self.elements[0],
             self.success,
+            prefixes[1],
             self.elements[1],
             self.lucky,
+            prefixes[2],
             self.elements[2],
             self.ill,
             self.elements[3],
@@ -189,56 +213,11 @@ pub fn compute_cde(res: &RollResult, element: &str) -> Result<CdeResult> {
 
         let mapping: Element = element.try_into()?;
         let (mapping, elements) = match mapping {
-            Element::Fire(m) => (
-                m,
-                [
-                    "㊋ fire".to_string(),
-                    "㊏ earth".to_string(),
-                    "㊍ wood".to_string(),
-                    "㊎ metal".to_string(),
-                    "㊌ water".to_string(),
-                ],
-            ),
-            Element::Earth(m) => (
-                m,
-                [
-                    "㊏ earth".to_string(),
-                    "㊎ metal".to_string(),
-                    "㊋ fire".to_string(),
-                    "㊌ water".to_string(),
-                    "㊍ wood".to_string(),
-                ],
-            ),
-            Element::Metal(m) => (
-                m,
-                [
-                    "㊎ metal".to_string(),
-                    "㊌ water".to_string(),
-                    "㊏ earth".to_string(),
-                    "㊍ wood".to_string(),
-                    "㊋ fire".to_string(),
-                ],
-            ),
-            Element::Water(m) => (
-                m,
-                [
-                    "㊌ water".to_string(),
-                    "㊍ wood".to_string(),
-                    "㊎ metal".to_string(),
-                    "㊋ fire".to_string(),
-                    "㊏ earth".to_string(),
-                ],
-            ),
-            Element::Wood(m) => (
-                m,
-                [
-                    "㊍ wood".to_string(),
-                    "㊋ fire".to_string(),
-                    "㊌ water".to_string(),
-                    "㊏ earth".to_string(),
-                    "㊎ metal".to_string(),
-                ],
-            ),
+            Element::Fire(m) => m,
+            Element::Earth(m) => m,
+            Element::Metal(m) => m,
+            Element::Water(m) => m,
+            Element::Wood(m) => m,
         };
 
         let mut result = res.iter().fold(CdeResult::default(), |mut acc, v| {
@@ -393,7 +372,7 @@ mod test {
             })
             .unwrap();
 
-        let res = compute_cde(&roll_res, "wood").unwrap();
+        let res = compute_cde(&roll_res, "bois").unwrap();
         let expected = CdeResult {
             success: 1,
             lucky: 2,
