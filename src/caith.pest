@@ -1,5 +1,5 @@
 number = @{ ASCII_DIGIT+ }
-float = @{ ASCII_DIGIT+ ~ fraction? }
+float = @{ ("+" | "-")? ~ ASCII_DIGIT+ ~ fraction? }
 fraction = @{ "." ~ ASCII_DIGIT{1,2}}
 nb_dice = @{ ASCII_NONZERO_DIGIT+ ~ ASCII_DIGIT* }
 op = _{ add | sub | mul | div }
@@ -31,7 +31,7 @@ number_list = _{ number ~ ("," ~ number)* }
 repeated_expr = { "(" ~ expr ~ ")" ~ "^" ~ (add | sort)? ~ number }
 
 expr = { leaf ~ (op ~ leaf)* }
-leaf = _{ dice |  float | number | "(" ~ expr ~ ")" }
+leaf = _{ dice |  float | integer | "(" ~ expr ~ ")" }
 integer = { ("+" | "-")? ~ number }
 reason = { ":" ~ ANY* }
 sort = { "#" }

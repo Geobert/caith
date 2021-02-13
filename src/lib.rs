@@ -495,12 +495,84 @@ mod tests {
     }
 
     #[test]
+    fn float_signed_mul_test() {
+        let r = Roller::new("20 * +1.5").unwrap();
+        let res = r.roll().unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(30, res.get_total());
+        } else {
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn float_neg_signed_mul_test() {
+        let r = Roller::new("20 * -1.5").unwrap();
+        let res = r.roll().unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(-30, res.get_total());
+        } else {
+            unreachable!()
+        }
+    }
+
+    #[test]
     fn float_add_test() {
         let r = Roller::new("20 + 1.5").unwrap();
         let res = r.roll().unwrap();
         let res = res.get_result();
         if let RollResultType::Single(res) = res {
             assert_eq!(21, res.get_total());
+        } else {
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn float_signed_add_test() {
+        let r = Roller::new("20 + +1.5").unwrap();
+        let res = r.roll().unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(21, res.get_total());
+        } else {
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn float_neg_signed_add_test() {
+        let r = Roller::new("20 + -1.5").unwrap();
+        let res = r.roll().unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(18, res.get_total());
+        } else {
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn signed_add_test() {
+        let r = Roller::new("20 + +5").unwrap();
+        let res = r.roll().unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(25, res.get_total());
+        } else {
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn signed_neg_add_test() {
+        let r = Roller::new("20 + -5").unwrap();
+        let res = r.roll().unwrap();
+        let res = res.get_result();
+        if let RollResultType::Single(res) = res {
+            assert_eq!(15, res.get_total());
         } else {
             unreachable!()
         }

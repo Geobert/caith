@@ -1,3 +1,6 @@
+# 4.1.1
+- FIX: can put signed number in expr again
+
 # 4.1.0
 - For `cde` helpers, if the element was passed in French, the printing of the result will
   be in French as well
