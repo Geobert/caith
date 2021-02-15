@@ -1,3 +1,6 @@
+# 4.1.2
+- FIX: distinguish float from integer properly
+
 # 4.1.1
 - FIX: can put signed number in expr again
 

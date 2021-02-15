@@ -1,5 +1,5 @@
 number = @{ ASCII_DIGIT+ }
-float = @{ ("+" | "-")? ~ ASCII_DIGIT+ ~ fraction? }
+float = @{ ("+" | "-")? ~ ASCII_DIGIT+ ~ fraction }
 fraction = @{ "." ~ ASCII_DIGIT{1,2}}
 nb_dice = @{ ASCII_NONZERO_DIGIT+ ~ ASCII_DIGIT* }
 op = _{ add | sub | mul | div }
