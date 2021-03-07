@@ -36,6 +36,7 @@ impl Display for Value {
 /// In a [`super::RollResult`]'s history, we either have a vector of the roll, or a separator
 /// between different dices. Ex: for `1d6 + 1d6`, we will have a [`RollHistory::Roll`] followed by
 /// [`RollHistory::Separator`] and another [`RollHistory::Roll`].
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum RollHistory {
     /// A roll with normal dices
@@ -46,6 +47,10 @@ pub enum RollHistory {
     Value(Value),
     /// An operation between roll and/or value
     Separator(&'static str),
+    /// Open parenthesis
+    OpenParenthesis,
+    /// Close parenthesis
+    CloseParenthesis,
 }
 
 impl Display for RollHistory {
@@ -94,6 +99,8 @@ impl Display for RollHistory {
                 s.push_str(sep);
                 s
             }
+            RollHistory::OpenParenthesis => "(".to_string(),
+            RollHistory::CloseParenthesis => ")".to_string(),
         };
         write!(f, "{}", s)
     }

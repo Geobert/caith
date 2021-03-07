@@ -1,3 +1,7 @@
+# 4.2.0
+- NEW: Added `RollHistory::OpenParenthesis` and `RollHistory::CloseParenthesis` in order
+  to keep the parenthesis of the expression on printing history.
+
 # 4.1.2
 - FIX: distinguish float from integer properly
 

@@ -295,10 +295,10 @@ fn compute_roll<RNG: DiceRollSource>(
     let maybe_nb = dice.next().unwrap();
     let nb = match maybe_nb.as_rule() {
         Rule::nb_dice => {
-            dice.next(); // skip `roll`
+            dice.next(); // skip `d` token
             maybe_nb.as_str().parse::<u64>().unwrap()
         }
-        Rule::roll => 1,
+        Rule::roll => 1, // no number before `d`, assume 1 dice
         _ => unreachable!("{:?}", maybe_nb),
     };
 
@@ -364,8 +364,9 @@ fn compute_roll<RNG: DiceRollSource>(
 pub(crate) fn compute<RNG: DiceRollSource>(
     expr: Pairs<Rule>,
     rng: &mut RNG,
+    is_block: bool,
 ) -> Result<SingleRollResult> {
-    get_climber().climb(
+    let res = get_climber().climb(
         expr,
         |pair: Pair<Rule>| match pair.as_rule() {
             Rule::integer => Ok(SingleRollResult::with_total(
@@ -374,7 +375,10 @@ pub(crate) fn compute<RNG: DiceRollSource>(
             Rule::float => Ok(SingleRollResult::with_float(
                 pair.as_str().parse::<f64>().unwrap(),
             )),
-            Rule::expr => compute(pair.into_inner(), rng),
+            Rule::block_expr => {
+                let expr = pair.into_inner().next().unwrap().into_inner();
+                compute(expr, rng, true)
+            }
             Rule::dice => compute_roll(pair.into_inner(), rng),
             _ => unreachable!("{:#?}", pair),
         },
@@ -397,7 +401,16 @@ pub(crate) fn compute<RNG: DiceRollSource>(
             (Err(e), _) => Err(e),
             (_, Err(e)) => Err(e),
         },
-    )
+    );
+    match res {
+        Ok(mut single_roll_res) => {
+            if is_block {
+                single_roll_res.add_parenthesis();
+            }
+            Ok(single_roll_res)
+        }
+        e @ Err(_) => e,
+    }
 }
 
 pub(crate) fn find_first_dice(expr: &mut Pairs<Rule>) -> Option<String> {

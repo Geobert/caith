@@ -31,7 +31,8 @@ number_list = _{ number ~ ("," ~ number)* }
 repeated_expr = { "(" ~ expr ~ ")" ~ "^" ~ (add | sort)? ~ number }
 
 expr = { leaf ~ (op ~ leaf)* }
-leaf = _{ dice |  float | integer | "(" ~ expr ~ ")" }
+leaf = _{ dice |  float | integer | block_expr }
+block_expr = { "(" ~ expr ~ ")" }
 integer = { ("+" | "-")? ~ number }
 reason = { ":" ~ ANY* }
 sort = { "#" }

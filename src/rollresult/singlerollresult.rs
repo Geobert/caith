@@ -76,6 +76,11 @@ impl SingleRollResult {
         });
     }
 
+    pub(crate) fn add_parenthesis(&mut self) {
+        self.history.insert(0, RollHistory::OpenParenthesis);
+        self.history.push(RollHistory::CloseParenthesis);
+    }
+
     /// Compute the total value according to some modifier
     pub(crate) fn compute_total(&mut self, modifier: TotalModifier) -> Result<i64> {
         if self.dirty {
@@ -91,7 +96,7 @@ impl SingleRollResult {
                         acc.append(&mut c);
                     }
                     RollHistory::Value(v) => acc.push(v.get_value()),
-                    RollHistory::Separator(_) => (),
+                    _ => (),
                 };
                 acc
             });

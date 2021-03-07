@@ -1,6 +1,6 @@
 [package]
 name = "caith"
-version = "4.1.2"
+version = "4.2.0"
 authors = ["Geobert Quach <geobert@protonmail.com>"]
 edition = "2018"
 description = "A dice roller library supporting many features"
@@ -22,10 +22,10 @@ maintenance = { status = "actively-developed" }
 [dependencies]
 pest = "2.1.3"
 pest_derive = "2.1.0"
-rand = "0.8.2"
+rand = "0.8.3"
 
 [dev-dependencies]
-rand_core = "0.6.1"
+rand_core = "0.6.2"
 
 [features]
 default = []

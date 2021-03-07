@@ -214,7 +214,9 @@ impl Roller {
         let mut pairs = RollParser::parse(Rule::command, &self.0)?;
         let expr_type = pairs.next().unwrap();
         let mut roll_res = match expr_type.as_rule() {
-            Rule::expr => RollResult::new_single(parser::compute(expr_type.into_inner(), rng)?),
+            Rule::expr => {
+                RollResult::new_single(parser::compute(expr_type.into_inner(), rng, false)?)
+            }
             Rule::repeated_expr => Roller::process_repeated_expr(expr_type, rng)?,
             _ => unreachable!(),
         };
@@ -253,7 +255,7 @@ impl Roller {
         } else {
             let results: Result<Vec<SingleRollResult>> =
                 (0..number).try_fold(Vec::new(), |mut res, _| {
-                    let c = parser::compute(expr.clone().into_inner(), rng)?;
+                    let c = parser::compute(expr.clone().into_inner(), rng, false)?;
                     res.push(c);
                     Ok(res)
                 });
@@ -724,7 +726,7 @@ mod tests {
 
     #[test]
     fn sandbox_test() {
-        let r = Roller::new("5d6 t[2,4,6]").unwrap();
+        let r = Roller::new("5d6 + 4 * 2").unwrap();
         r.dices()
             .expect("Error while parsing")
             .for_each(|d| eprintln!("{}", d));
