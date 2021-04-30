@@ -155,7 +155,7 @@ impl TryFrom<&str> for Element {
 
 impl Display for CdeResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let prefixes = if self.elements.contains(&"feu") {
+        let prefixes = if self.elements.contains(&"㊋ feu") {
             ["Succès", "Dé-fastes", "Dé-néfastes"]
         } else {
             ["Success", "Lucky dice", "Ill dice"]
