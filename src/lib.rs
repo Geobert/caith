@@ -1,7 +1,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(docsrs, deny(broken_intra_doc_links))]
 #![warn(missing_docs)]
-#![warn(broken_intra_doc_links)]
+#![warn(rustdoc::broken_intra_doc_links)]
 //! A dice roller library written in Rust (and also a card drawer).
 //!
 //! This crate aims at providing everything needed for playing tabletop RPG.
