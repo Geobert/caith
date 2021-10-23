@@ -73,7 +73,7 @@ impl RollResult {
     pub fn as_repeated(&self) -> Option<&RepeatedRollResult> {
         match &self.result {
             RollResultType::Single(_) => None,
-            RollResultType::Repeated(results) => Some(&results),
+            RollResultType::Repeated(results) => Some(results),
         }
     }
 }

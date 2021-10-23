@@ -2,7 +2,7 @@
 name = "caith"
 version = "4.2.1"
 authors = ["Geobert Quach <geobert@protonmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "A dice roller library supporting many features"
 keywords = ["dice", "roll", "RPG", "roll", "random"]
 categories = ["game-development", "games"]

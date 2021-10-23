@@ -92,16 +92,16 @@ const WOOD: [Outcome; 10] = [
     Outcome::Loksyu(Side::Yin),  // 10
 ];
 
-const FIRE_SUIT_EN: [&'static str; 5] = ["㊋ fire", "㊏ earth", "㊍ wood", "㊎ metal", "㊌ water"];
-const FIRE_SUIT_FR: [&'static str; 5] = ["㊋ feu", "㊏ terre", "㊍ bois", "㊎ métal", "㊌ eau"];
-const EARTH_SUIT_EN: [&'static str; 5] = ["㊏ earth", "㊎ metal", "㊋ fire", "㊌ water", "㊍ wood"];
-const EARTH_SUIT_FR: [&'static str; 5] = ["㊏ terre", "㊎ métal", "㊋ feu", "㊌ eau", "㊍ bois"];
-const METAL_SUIT_EN: [&'static str; 5] = ["㊎ metal", "㊌ water", "㊏ earth", "㊍ wood", "㊋ fire"];
-const METAL_SUIT_FR: [&'static str; 5] = ["㊎ métal", "㊌ eau", "㊏ terre", "㊍ bois", "㊋ feu"];
-const WATER_SUIT_EN: [&'static str; 5] = ["㊌ water", "㊍ wood", "㊎ metal", "㊋ fire", "㊏ earth"];
-const WATER_SUIT_FR: [&'static str; 5] = ["㊌ eau", "㊍ bois", "㊎ métal", "㊋ feu", "㊏ terre"];
-const WOOD_SUIT_EN: [&'static str; 5] = ["㊍ wood", "㊋ fire", "㊌ water", "㊏ earth", "㊎ metal"];
-const WOOD_SUIT_FR: [&'static str; 5] = ["㊍ bois", "㊋ feu", "㊌ eau", "㊏ terre", "㊎ métal"];
+const FIRE_SUIT_EN: [&str; 5] = ["㊋ fire", "㊏ earth", "㊍ wood", "㊎ metal", "㊌ water"];
+const FIRE_SUIT_FR: [&str; 5] = ["㊋ feu", "㊏ terre", "㊍ bois", "㊎ métal", "㊌ eau"];
+const EARTH_SUIT_EN: [&str; 5] = ["㊏ earth", "㊎ metal", "㊋ fire", "㊌ water", "㊍ wood"];
+const EARTH_SUIT_FR: [&str; 5] = ["㊏ terre", "㊎ métal", "㊋ feu", "㊌ eau", "㊍ bois"];
+const METAL_SUIT_EN: [&str; 5] = ["㊎ metal", "㊌ water", "㊏ earth", "㊍ wood", "㊋ fire"];
+const METAL_SUIT_FR: [&str; 5] = ["㊎ métal", "㊌ eau", "㊏ terre", "㊍ bois", "㊋ feu"];
+const WATER_SUIT_EN: [&str; 5] = ["㊌ water", "㊍ wood", "㊎ metal", "㊋ fire", "㊏ earth"];
+const WATER_SUIT_FR: [&str; 5] = ["㊌ eau", "㊍ bois", "㊎ métal", "㊋ feu", "㊏ terre"];
+const WOOD_SUIT_EN: [&str; 5] = ["㊍ wood", "㊋ fire", "㊌ water", "㊏ earth", "㊎ metal"];
+const WOOD_SUIT_FR: [&str; 5] = ["㊍ bois", "㊋ feu", "㊌ eau", "㊏ terre", "㊎ métal"];
 
 #[derive(Debug, Default)]
 /// This struct represent the repartition of the dices according to an element

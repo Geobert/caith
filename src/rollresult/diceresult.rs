@@ -49,7 +49,7 @@ impl Eq for DiceResult {}
 
 impl PartialOrd for DiceResult {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(&other))
+        Some(self.cmp(other))
     }
 }
 
