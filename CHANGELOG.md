@@ -1,3 +1,13 @@
+# 4.2.2
+- FIX: Panic when parsing "+ 3" .
+- FIX: OOM error on too big numbers. We now limit to 5000 dices of 5000 sides.
+Thanks to @Monadic-Cat for setting up the fuzzy tests that discovers these.
+Some panics still can occurs when numbers are very big and overflow on operation but I 
+think it's the correct behaviour.
+
+# 4.2.1
+- FIX: translation issue in CdE ill dice
+
 # 4.2.0
 - NEW: Added `RollHistory::OpenParenthesis` and `RollHistory::CloseParenthesis` in order
   to keep the parenthesis of the expression on printing history.

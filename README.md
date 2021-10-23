@@ -82,6 +82,10 @@ None is activated by default
 `caith` can create a standard deck of 52 cards plus optional Jokers if the feature `cards`
 is activated. See [`cards::Deck`].
 
+# Limitations
+
+To avoid OOM issue, there is a limit of 5000 dices of 5000 sides maximum.
+
 # Examples
 
 These examples are directly taken from DiceMaiden's Readme:
