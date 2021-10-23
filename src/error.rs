@@ -36,3 +36,9 @@ impl From<&str> for RollError {
         RollError::ParamError(e.to_string())
     }
 }
+
+impl From<String> for RollError {
+    fn from(e: String) -> Self {
+        Self::ParamError(e)
+    }
+}
