@@ -16,6 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - uses: icepuma/rust-action@1.56.0
     - name: Build
       run: cargo build --verbose
     - name: Run tests
