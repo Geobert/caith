@@ -370,10 +370,10 @@ pub(crate) fn compute<RNG: DiceRollSource>(
         expr,
         |pair: Pair<Rule>| match pair.as_rule() {
             Rule::integer => Ok(SingleRollResult::with_total(
-                pair.as_str().parse::<i64>().unwrap(),
+                pair.as_str().replace(' ', "").parse::<i64>().unwrap(),
             )),
             Rule::float => Ok(SingleRollResult::with_float(
-                pair.as_str().parse::<f64>().unwrap(),
+                pair.as_str().replace(' ', "").parse::<f64>().unwrap(),
             )),
             Rule::block_expr => {
                 let expr = pair.into_inner().next().unwrap().into_inner();
