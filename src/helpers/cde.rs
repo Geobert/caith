@@ -169,7 +169,7 @@ impl Display for CdeResult {
 Loksyu ({}): {} ● Yin / {} ○ Yang
 Tin Ji ({}): {}
 "#,
-            self.history.as_ref().unwrap().to_string(),
+            self.history.as_ref().unwrap(),
             prefixes[0],
             self.elements[0],
             self.success,

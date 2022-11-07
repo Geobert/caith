@@ -1,3 +1,7 @@
+# 4.2.3
+- Upgrade dependencies
+- Port code to pest 2.4 (`prec_climber` being deprecated)
+
 # 4.2.2
 - FIX: Panic when parsing "+ 3" .
 - FIX: OOM error on too big numbers. We now limit to 5000 dices of 5000 sides.

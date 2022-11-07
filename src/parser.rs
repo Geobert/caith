@@ -2,7 +2,7 @@ use std::sync::{Arc, Once, RwLock};
 
 use pest::{
     iterators::{Pair, Pairs},
-    prec_climber::{Assoc, Operator, PrecClimber},
+    pratt_parser::PrattParser,
 };
 use pest_derive::Parser;
 
@@ -41,7 +41,7 @@ struct OptionResult {
 // Struct to have a singleton of PrecClimber without using once_cell
 #[derive(Clone)]
 struct Climber {
-    inner: Arc<RwLock<PrecClimber<Rule>>>,
+    inner: Arc<RwLock<PrattParser<Rule>>>,
 }
 
 impl Climber {
@@ -49,9 +49,14 @@ impl Climber {
     where
         P: Iterator<Item = Pair<'i, Rule>>,
         F: FnMut(Pair<'i, Rule>) -> T,
-        G: FnMut(T, Pair<'i, Rule>, T) -> T,
+        G: FnMut(T, Pair<'i, Rule>, T) -> T + 'i,
     {
-        self.inner.read().unwrap().climb(pairs, primary, infix)
+        self.inner
+            .read()
+            .unwrap()
+            .map_primary(primary)
+            .map_infix(infix)
+            .parse(pairs)
     }
 }
 
@@ -61,15 +66,15 @@ fn get_climber() -> Climber {
 
     unsafe {
         ONCE.call_once(|| {
-            use self::Assoc::*;
-            use self::Rule::*;
+            use pest::pratt_parser::{Assoc, Op};
 
             // Make it
             let singleton = Climber {
-                inner: Arc::new(RwLock::new(PrecClimber::new(vec![
-                    Operator::new(add, Left) | Operator::new(sub, Left),
-                    Operator::new(mul, Left) | Operator::new(div, Left),
-                ]))),
+                inner: Arc::new(RwLock::new(
+                    PrattParser::new()
+                        .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::sub, Assoc::Left))
+                        .op(Op::infix(Rule::mul, Assoc::Left) | Op::infix(Rule::div, Assoc::Left)),
+                )),
             };
 
             // Put it in the heap so it can outlive this call

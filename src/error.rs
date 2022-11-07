@@ -9,7 +9,7 @@ pub type Result<T> = std::result::Result<T, RollError>;
 #[derive(Debug)]
 pub enum RollError {
     /// Error while parsing the expression, emitted by `pest`
-    ParseError(pest::error::Error<Rule>),
+    ParseError(Box<pest::error::Error<Rule>>),
     /// Any other error while walking the AST, the String contains an explaination of what happened
     ParamError(String),
 }
@@ -27,7 +27,7 @@ impl Error for RollError {}
 
 impl From<pest::error::Error<Rule>> for RollError {
     fn from(e: pest::error::Error<Rule>) -> Self {
-        RollError::ParseError(e)
+        RollError::ParseError(Box::new(e))
     }
 }
 
