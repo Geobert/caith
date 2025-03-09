@@ -733,4 +733,57 @@ mod tests {
 
         eprintln!("{}\n{}", r.as_str(), r.roll().unwrap());
     }
+
+    #[test]
+    fn caith_minimal() {
+        // This should deterministically roll a 1
+        let roller = Roller::new(&"1d1").unwrap();
+
+        let result = roller.roll().unwrap();
+        let numeric = result.as_single().unwrap();
+        let history = numeric.to_string_history();
+        let as_string = numeric.to_string(false);
+
+        assert_eq!(numeric.get_total(), 1);
+        assert_eq!(as_string, "[1] = 1");
+        // Not sure how the history works, maybe this is expected?
+        assert_eq!(history, "[1]");
+    }
+
+    #[test]
+    fn caith_reroll() {
+        // This should deterministically roll a 1, then reroll 1
+        let roller = Roller::new(&"1d1 r1").unwrap();
+
+        let result = roller.roll().unwrap();
+        let numeric = result.as_single().unwrap();
+        let history = numeric.to_string_history();
+        let as_string = numeric.to_string(false);
+
+        assert_eq!(numeric.get_total(), 1);
+        assert_eq!(as_string, "[1] = 1");
+        // Not sure how the history works, maybe this is expected?
+        assert_eq!(history, "[1]");
+    }
+
+    #[test]
+    fn caith_no_reroll() {
+        // This should deterministically roll a 1, then not reroll anything since 1 > 0
+        let roller = Roller::new(&"1d1 r0").unwrap();
+
+        let result = roller.roll().unwrap();
+        let numeric = result.as_single().unwrap();
+        let history = numeric.to_string_history();
+        let as_string = numeric.to_string(false);
+
+        // For an unknown reason this roll is producing 0 and not 1.
+        assert_eq!(numeric.get_total(), 1);
+
+        // The formatted string output is just "0", which also seems wrong.
+        // Thus currently failing:
+        assert_eq!(as_string, "[1] = 1");
+
+        // The "history" is an empty string. Not sure if this is expected.
+        assert_eq!(history, "");
+    }
 }
