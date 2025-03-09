@@ -76,6 +76,12 @@ impl SingleRollResult {
         });
     }
 
+    pub(crate) fn add_rerolled_history(&mut self, mut history: Vec<Vec<DiceResult>>) {
+        self.dirty = true;
+        history.sort_unstable_by(|a, b| b.cmp(a));
+        self.history.push(RollHistory::ReRolls(history));
+    }
+
     pub(crate) fn add_parenthesis(&mut self) {
         self.history.insert(0, RollHistory::OpenParenthesis);
         self.history.push(RollHistory::CloseParenthesis);

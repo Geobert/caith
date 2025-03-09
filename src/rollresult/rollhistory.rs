@@ -39,6 +39,9 @@ impl Display for Value {
 #[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum RollHistory {
+    /// Rolls which include rerolls.
+    /// Should be followed by a Roll with the final results.
+    ReRolls(Vec<Vec<DiceResult>>),
     /// A roll with normal dices
     Roll(Vec<DiceResult>),
     /// A roll with Fudge dices
@@ -56,18 +59,26 @@ pub enum RollHistory {
 impl Display for RollHistory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
+            RollHistory::ReRolls(v) => {
+                let s2 = v
+                    .iter()
+                    .map(|r| {
+                        r.iter()
+                            .map(|r| r.res.to_string())
+                            .collect::<Vec<_>>()
+                            .join(" -> ")
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("[{}] -> ", s2)
+            }
             RollHistory::Roll(v) => {
-                let mut s = String::new();
-                s.push('[');
-                let len = v.len();
-                v.iter().enumerate().for_each(|(i, r)| {
-                    s.push_str(&r.res.to_string());
-                    if i < len - 1 {
-                        s.push_str(", ");
-                    }
-                });
-                s.push(']');
-                s
+                let s2 = v
+                    .iter()
+                    .map(|r| r.res.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("[{}]", s2)
             }
             RollHistory::Fudge(v) => {
                 let mut s = String::new();
