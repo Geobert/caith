@@ -760,9 +760,9 @@ mod tests {
         let as_string = numeric.to_string(false);
 
         assert_eq!(numeric.get_total(), 1);
-        assert_eq!(as_string, "[1] = 1");
-        // Rerolls are currently not displayed in the history
-        assert_eq!(history, "[1]");
+        assert_eq!(as_string, "[1 -> 1] -> [1] = 1");
+        // Rerolls are now displayed in the history
+        assert_eq!(history, "[1 -> 1] -> [1]");
     }
 
     #[test]

@@ -144,22 +144,30 @@ fn compute_reroll<RNG: DiceRollSource>(
 ) -> (TotalModifier, Vec<DiceResult>) {
     let value = extract_option_value(option).unwrap();
     let mut has_rerolled = false;
-    let res: Vec<DiceResult> = res
-        .into_iter()
+    let mut rerolls: Vec<Vec<DiceResult>> = vec![];
+    let res_new: Vec<DiceResult> = res
+        .iter()
         .map(|x| {
-            if x.res <= value {
+            let mut inner = vec![*x];
+            let result = if x.res <= value {
                 has_rerolled = true;
-                roll_dice(1, sides, rng)[0]
+                let rerolled = roll_dice(1, sides, rng)[0];
+                inner.push(rerolled);
+                rerolled
             } else {
-                x
-            }
+                *x
+            };
+            rerolls.push(inner);
+            result
         })
         .collect();
 
-    // Original roll is not included in history, so add the result, regardless of if a reroll occurred.
-    rolls.add_history(res.clone(), false);
+    if has_rerolled {
+        rolls.add_rerolled_history(rerolls);
+    }
+    rolls.add_history(res_new.clone(), false);
 
-    (TotalModifier::None(Rule::reroll), res)
+    (TotalModifier::None(Rule::reroll), res_new)
 }
 
 fn compute_i_reroll<RNG: DiceRollSource>(
