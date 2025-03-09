@@ -18,7 +18,7 @@ pub(crate) struct RollParser;
 
 // arbitrary limit to avoid OOM
 const MAX_DICE_SIDES: u64 = 5000;
-const MAX_NB_DICE: u64 = 5000;
+const MAX_NUMBER_OF_DICE: u64 = 5000;
 
 // number represent nb dice to keep/drop
 #[derive(Clone, PartialEq)]
@@ -157,7 +157,7 @@ fn compute_reroll<RNG: DiceRollSource>(
         .collect();
 
     // Original roll is not included in history, so add the result, regardless of if a reroll occurred.
-        rolls.add_history(res.clone(), false);
+    rolls.add_history(res.clone(), false);
 
     (TotalModifier::None(Rule::reroll), res)
 }
@@ -301,20 +301,22 @@ fn compute_roll<RNG: DiceRollSource>(
     rng: &mut RNG,
 ) -> Result<SingleRollResult> {
     let mut rolls = SingleRollResult::new();
-    let maybe_nb = dice.next().unwrap();
-    let nb = match maybe_nb.as_rule() {
+    let number_of_dice = dice.next().unwrap();
+    let number_of_dice = match number_of_dice.as_rule() {
         Rule::nb_dice => {
             dice.next(); // skip `d` token
-            let n = maybe_nb.as_str().parse::<u64>().unwrap();
-            if n > MAX_NB_DICE {
-                return Err(
-                    format!("Exceed maximum allowed number of dices ({})", MAX_NB_DICE).into(),
-                );
+            let n = number_of_dice.as_str().parse::<u64>().unwrap();
+            if n > MAX_NUMBER_OF_DICE {
+                return Err(format!(
+                    "Exceed maximum allowed number of dices ({})",
+                    MAX_NUMBER_OF_DICE
+                )
+                .into());
             }
             n
         }
         Rule::roll => 1, // no number before `d`, assume 1 dice
-        _ => unreachable!("{:?}", maybe_nb),
+        _ => unreachable!("{:?}", number_of_dice),
     };
 
     let pair = dice.next().unwrap();
@@ -330,7 +332,7 @@ fn compute_roll<RNG: DiceRollSource>(
         return Err(format!("Dice can't have more than {}", MAX_DICE_SIDES).into());
     }
 
-    let mut res = roll_dice(nb, sides, rng);
+    let mut res = roll_dice(number_of_dice, sides, rng);
     let mut modifier = TotalModifier::None(Rule::expr);
     let mut next_option = dice.next();
     if !is_fudge {
