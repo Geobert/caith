@@ -156,9 +156,9 @@ fn compute_reroll<RNG: DiceRollSource>(
         })
         .collect();
 
-    if has_rerolled {
+    // Original roll is not included in history, so add the result, regardless of if a reroll occurred.
         rolls.add_history(res.clone(), false);
-    }
+
     (TotalModifier::None(Rule::reroll), res)
 }
 

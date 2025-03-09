@@ -746,7 +746,6 @@ mod tests {
 
         assert_eq!(numeric.get_total(), 1);
         assert_eq!(as_string, "[1] = 1");
-        // Not sure how the history works, maybe this is expected?
         assert_eq!(history, "[1]");
     }
 
@@ -762,7 +761,7 @@ mod tests {
 
         assert_eq!(numeric.get_total(), 1);
         assert_eq!(as_string, "[1] = 1");
-        // Not sure how the history works, maybe this is expected?
+        // Rerolls are currently not displayed in the history
         assert_eq!(history, "[1]");
     }
 
@@ -776,14 +775,8 @@ mod tests {
         let history = numeric.to_string_history();
         let as_string = numeric.to_string(false);
 
-        // For an unknown reason this roll is producing 0 and not 1.
         assert_eq!(numeric.get_total(), 1);
-
-        // The formatted string output is just "0", which also seems wrong.
-        // Thus currently failing:
         assert_eq!(as_string, "[1] = 1");
-
-        // The "history" is an empty string. Not sure if this is expected.
-        assert_eq!(history, "");
+        assert_eq!(history, "[1]");
     }
 }
